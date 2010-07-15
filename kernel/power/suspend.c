@@ -448,11 +448,9 @@ static int suspend_enter(suspend_state_t state, bool *wakeup)
 
 	arch_suspend_disable_irqs();
 	BUG_ON(!irqs_disabled());
-	if (check_touchirq_triggerd()) {
-		pr_debug("[TP]touchpanel irq status is low\n");
-		error = -EBUSY;
-		goto Enable_irq;
-	}
+
+	system_state = SYSTEM_SUSPEND;
+
 	error = syscore_suspend();
 	if (!error) {
 		*wakeup = pm_wakeup_pending();
@@ -468,7 +466,9 @@ static int suspend_enter(suspend_state_t state, bool *wakeup)
 		}
 		syscore_resume();
 	}
-Enable_irq:
+
+	system_state = SYSTEM_RUNNING;
+
 	arch_suspend_enable_irqs();
 	BUG_ON(irqs_disabled());
 
