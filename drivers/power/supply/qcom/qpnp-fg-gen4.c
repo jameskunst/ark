@@ -1021,9 +1021,6 @@ static int fg_gen4_get_prop_capacity_raw(struct fg_gen4_chip *chip, int *val)
 		return rc;
 	}
 
-	/* Show it in centi-percentage */
-	*val = (*val * 10000) / 0xFFFF;
-
 	return 0;
 }
 
@@ -1033,7 +1030,7 @@ static int fg_gen4_get_prop_capacity_raw_max(struct fg_gen4_chip *chip, int *val
 	int rc;
 
 	if (chip->dt.soc_hi_res)
-		*val = 10000;
+		*val = 65535;
 	else
 		*val = FULL_SOC_RAW;
 
