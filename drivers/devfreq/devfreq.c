@@ -1121,14 +1121,16 @@ static ssize_t polling_interval_store(struct device *dev,
 	unsigned int value;
 	int ret;
 
-	if (!df->governor)
-		return -EINVAL;
-
 	ret = sscanf(buf, "%u", &value);
 	if (ret != 1)
 		return -EINVAL;
 
 	mutex_lock(&df->event_lock);
+	if (!df->governor || df->dev_suspended) {
+		dev_warn(dev, "device suspended, operation not allowed\n");
+		mutex_unlock(&df->event_lock);
+		return -EINVAL;
+	}
 	df->governor->event_handler(df, DEVFREQ_GOV_INTERVAL, &value);
 	ret = count;
 	mutex_unlock(&df->event_lock);
@@ -1154,6 +1156,11 @@ static ssize_t min_freq_store(struct device *dev, struct device_attribute *attr,
 		return -EINVAL;
 
 	mutex_lock(&df->event_lock);
+	if (df->dev_suspended) {
+		dev_warn(dev, "device suspended, min freq not allowed\n");
+		mutex_unlock(&df->event_lock);
+		return -EINVAL;
+	}
 	mutex_lock(&df->lock);
 	max = df->max_freq;
 	if (value && max && value > max) {
@@ -1183,6 +1190,11 @@ static ssize_t max_freq_store(struct device *dev, struct device_attribute *attr,
 		return -EINVAL;
 
 	mutex_lock(&df->event_lock);
+	if (df->dev_suspended) {
+		mutex_unlock(&df->event_lock);
+		dev_warn(dev, "device suspended, max freq not allowed\n");
+		return -EINVAL;
+	}
 	mutex_lock(&df->lock);
 	min = df->min_freq;
 	if (value && min && value < min) {
