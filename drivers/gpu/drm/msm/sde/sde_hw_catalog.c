@@ -3744,7 +3744,6 @@ static int sde_hardware_format_caps(struct sde_mdss_cfg *sde_cfg,
 	int rc = 0;
 	uint32_t dma_list_size, vig_list_size, wb2_list_size;
 	uint32_t virt_vig_list_size;
-	uint32_t cursor_list_size = 0;
 	uint32_t index = 0;
 
 	if (IS_SDE_MAJOR_MINOR_SAME((hw_rev), SDE_HW_VER_300)) {
