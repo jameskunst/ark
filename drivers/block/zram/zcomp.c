@@ -112,7 +112,7 @@ ssize_t zcomp_available_show(const char *comp, char *buf)
 struct zcomp_strm *zcomp_stream_get(struct zcomp *comp)
 {
 	local_lock(&comp->stream->lock);
-	return this_cpu_ptr(comp->stream);
+	return get_cpu_ptr(comp->stream);
 }
 
 void zcomp_stream_put(struct zcomp *comp)
