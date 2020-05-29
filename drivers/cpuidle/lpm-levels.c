@@ -65,6 +65,9 @@ struct lpm_cluster *lpm_root_node;
 
 #define MAXSAMPLES 5
 
+static bool lpm_prediction = true;
+module_param_named(lpm_prediction, lpm_prediction, bool, 0664);
+
 static uint32_t bias_hyst;
 module_param_named(bias_hyst, bias_hyst, uint, 0664);
 
