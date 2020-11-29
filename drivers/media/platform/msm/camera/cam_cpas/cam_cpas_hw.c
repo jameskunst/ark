@@ -1000,8 +1000,9 @@ static int cam_cpas_hw_start(void *hw_priv, void *start_args,
 		ahb_vote->type, ahb_vote->vote.level, cpas_client->ahb_level);
 	rc = cam_cpas_util_apply_client_ahb_vote(cpas_hw, cpas_client,
 		ahb_vote, &applied_level);
-	if (rc)
+	if (rc) {
 		goto done;
+	}
 
 	CAM_DBG(CAM_CPAS,
 		"AXI client=[%d][%s][%d] compressed_bw[%llu], uncompressed_bw[%llu]",
