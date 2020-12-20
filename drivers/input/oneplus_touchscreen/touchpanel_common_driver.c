@@ -2780,13 +2780,12 @@ static int tp_register_irq_func(struct touchpanel_data *ts)
 {
 	int ret = 0;
 
-#ifdef TPD_USE_EINT
 	if (gpio_is_valid(ts->hw_res.irq_gpio)) {
 		TPD_DEBUG("%s, irq_gpio is %d, ts->irq is %d\n", __func__,
 			  ts->hw_res.irq_gpio, ts->irq);
 		ret =
 		    request_threaded_irq(ts->irq, NULL, tp_irq_thread_fn,
-					 ts->irq_flags | IRQF_ONESHOT,
+					 ts->irq_flags | IRQF_ONESHOT | IRQF_PRIME_AFFINE,
 					 TPD_DEVICE, ts);
 		if (ret < 0) {
 			TPD_INFO("%s request_threaded_irq ret is %d\n",
@@ -2795,11 +2794,6 @@ static int tp_register_irq_func(struct touchpanel_data *ts)
 	} else {
 		TPD_INFO("%s:no valid irq\n", __func__);
 	}
-#else
-	hrtimer_init(&ts->timer, CLOCK_MONOTONIC, HRTIMER_MODE_REL);
-	ts->timer.function = touchpanel_timer_func;
-	hrtimer_start(&ts->timer, ktime_set(3, 0), HRTIMER_MODE_REL);
-#endif
 
 	return ret;
 }
