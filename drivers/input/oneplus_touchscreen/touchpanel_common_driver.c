@@ -1507,7 +1507,7 @@ static ssize_t proc_fw_update_write(struct file *file, const char __user * page,
 	if (!ts->force_update && ts->firmware_update_type != 2)
 		ts->force_update = ! !val;
 
-	schedule_work(&ts->fw_update_work);
+	queue_work(system_highpri_wq, &ts->fw_update_work);
 
 	ret =
 	    wait_for_completion_killable_timeout(&ts->fw_complete,
@@ -1964,7 +1964,7 @@ static ssize_t sec_update_fw_store(struct device *dev,
 	if (!ts->force_update && ts->firmware_update_type != 2)
 		ts->force_update = ! !val;
 
-	schedule_work(&ts->fw_update_work);
+	queue_work(system_highpri_wq, &ts->fw_update_work);
 
 	ret =
 	    wait_for_completion_killable_timeout(&ts->fw_complete,
