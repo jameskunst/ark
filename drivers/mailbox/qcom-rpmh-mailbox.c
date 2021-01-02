@@ -219,7 +219,7 @@ static struct tcs_response *setup_response(struct rsc_drv *drv,
 	spin_unlock_irqrestore(&pool->lock, flags);
 
 	if (pos == MAX_POOL_SIZE)
-		pr_err("response pool is full\n");
+		pr_debug("response pool is full\n");
 
 	return resp;
 }
@@ -460,7 +460,7 @@ static irqreturn_t tcs_irq_handler(int irq, void *p)
 
 		resp = get_response(drv, m, true);
 		if (!resp) {
-			pr_err("No resp request for TCS-%d\n", m);
+			pr_debug("No resp request for TCS-%d\n", m);
 			goto no_resp;
 		}
 
@@ -1013,9 +1013,8 @@ tx_fail:
 		ret = 0;
 	}
 
-	/* If we were just busy waiting for TCS, dump the state and return */
+	/* If we were just busy waiting for TCS, return */
 	if (ret == -EBUSY) {
-		//dev_err_ratelimited(chan->cl->dev, "TCS Busy, retrying RPMH message send\n");
 		ret = -EAGAIN;
 	}
 
@@ -1123,7 +1122,7 @@ static struct mbox_chan *of_tcs_mbox_xlate(struct mbox_controller *mbox,
 	struct mbox_chan *chan;
 
 	if (drv->num_assigned >= mbox->num_chans) {
-		pr_err("TCS-Mbox out of channel memory\n");
+		pr_debug("TCS-Mbox out of channel memory\n");
 		return ERR_PTR(-ENOMEM);
 	}
 
@@ -1247,7 +1246,7 @@ static int rsc_drv_probe(struct platform_device *pdev)
 	}
 
 	if (!num_chans) {
-		pr_err("%s: No clients for controller (%s)\n", __func__,
+		pr_debug("%s: No clients for controller (%s)\n", __func__,
 							dn->full_name);
 		return -ENODEV;
 	}
