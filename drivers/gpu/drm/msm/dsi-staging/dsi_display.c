@@ -733,7 +733,7 @@ static void dsi_display_register_te_irq(struct dsi_display *display)
 
 error:
 	/* disable the TE based ESD check */
-	pr_warn("Unable to register for TE IRQ\n");
+	pr_debug("Unable to register for TE IRQ\n");
 	if (display->panel->esd_config.status_mode == ESD_MODE_PANEL_TE)
 		display->panel->esd_config.esd_enabled = false;
 }
@@ -1438,7 +1438,7 @@ int dsi_display_check_status(struct drm_connector *connector, void *display,
 	} else if (status_mode == ESD_MODE_SW_BTA) {
 		rc = dsi_display_status_bta_request(dsi_display);
 	} else {
-		pr_warn("Unsupported ESD check mode: %d\n", status_mode);
+		pr_debug("Unsupported ESD check mode: %d\n", status_mode);
 		panel->esd_config.esd_enabled = false;
 	}
 
@@ -1537,7 +1537,7 @@ int dsi_display_cmd_transfer(struct drm_connector *connector,
 	 * sysfs interface when device is in suepnd state.
 	 */
 	if (!rc && !state) {
-		pr_warn_ratelimited("Command xfer attempted while device is in suspend state\n"
+		pr_debug_ratelimited("Command xfer attempted while device is in suspend state\n"
 				);
 		rc = -EPERM;
 		goto end;
@@ -4168,7 +4168,7 @@ static int dsi_display_parse_lane_map(struct dsi_display *display)
 			DSI_PHYSICAL_LANE_1,
 			DSI_PHYSICAL_LANE_0);
 	} else {
-		pr_warn("%s: invalid lane map %s specified. defaulting to lane_map0123\n",
+		pr_debug("%s: invalid lane map %s specified. defaulting to lane_map0123\n",
 			__func__, data);
 		goto set_default;
 	}
@@ -7747,7 +7747,7 @@ static int dsi_display_cb_error_handler(void *data,
 		queue_work(display->err_workq, &display->lp_rx_timeout_work);
 		break;
 	default:
-		pr_warn("unhandled error interrupt: %d\n", event_idx);
+		pr_debug("unhandled error interrupt: %d\n", event_idx);
 		break;
 	}
 
