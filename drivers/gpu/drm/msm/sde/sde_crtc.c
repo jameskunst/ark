@@ -1446,7 +1446,7 @@ static u32 _sde_crtc_get_displays_affected(struct drm_crtc *crtc,
 	bool is_ppsplit = false;
 
 	if (!crtc || !state) {
-		pr_err("Invalid crtc or state\n");
+		pr_debug("Invalid crtc or state\n");
 		return 0;
 	}
 
@@ -3120,7 +3120,7 @@ void sde_crtc_complete_commit(struct drm_crtc *crtc,
 			blank = cstate->fingerprint_pressed;
 			notifier_data.data = &blank;
 			notifier_data.id = MSM_DRM_PRIMARY_DISPLAY;
-			pr_err("fingerprint status: %s",
+			pr_debug("fingerprint status: %s",
 			       blank ? "pressed" : "up");
 			SDE_ATRACE_BEGIN("press_event_notify");
 			msm_drm_notifier_call_chain(MSM_DRM_ONSCREENFINGERPRINT_EVENT,
@@ -3481,7 +3481,7 @@ ssize_t oneplus_display_notify_aod_hid(struct device *dev,
 		return count;
 		}
 
-	pr_err("notify aod hid %d\n", onscreenaod_hid );
+	pr_debug("notify aod hid %d\n", onscreenaod_hid );
 	oneplus_onscreenaod_hid = onscreenaod_hid;
 	SDE_ATRACE_END("aod_hid_node");
 	return count;
@@ -3527,7 +3527,7 @@ ssize_t oneplus_display_notify_fp_press(struct device *dev,
 		return count;
 		}
 
-	pr_err("notify fingerpress %d\n", onscreenfp_status );
+	pr_debug("notify fingerpress %d\n", onscreenfp_status );
 	oneplus_onscreenfp_status = onscreenfp_status;
 
 	drm_modeset_lock_all(drm_dev);
@@ -3583,7 +3583,7 @@ int oneplus_aod_dc = 0;
 	sscanf(buf, "%du", &dim_status);
 
 	if (dsi_display->panel->aod_status == 0 && (dim_status == 2)) {
-		pr_err("fp set it in normal status\n");
+		pr_debug("fp set it in normal status\n");
 		if (dim_status == oneplus_dim_status)
 			return count;
 		oneplus_dim_status = dim_status;
@@ -3602,10 +3602,10 @@ int oneplus_aod_dc = 0;
 	if (dim_status == oneplus_dim_status)
 		return count;
 	oneplus_dim_status = dim_status;
-	pr_err("notify dim %d,aod = %d press= %d aod_hide =%d\n",
+	pr_debug("notify dim %d,aod = %d press= %d aod_hide =%d\n",
 		oneplus_dim_status, dsi_display->panel->aod_status, oneplus_onscreenfp_status, aod_layer_hide);
 	if (oneplus_dim_status == 1 && HBM_flag) {
-		pr_err("notify dim not commit");
+		pr_debug("notify dim not commit");
 		return count;
 	}
 	drm_modeset_lock_all(drm_dev);
@@ -3654,7 +3654,7 @@ static int sde_crtc_config_fingerprint_dim_layer(struct drm_crtc_state *crtc_sta
 	cstate = to_sde_crtc_state(crtc_state);
 
 	if (cstate->num_dim_layers == SDE_MAX_DIM_LAYERS - 1) {
-		pr_err("failed to get available dim layer for custom\n");
+		pr_debug("failed to get available dim layer for custom\n");
 		return -EINVAL;
 	}
 
