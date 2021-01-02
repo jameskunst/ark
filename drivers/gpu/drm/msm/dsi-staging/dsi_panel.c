@@ -978,7 +978,7 @@ int dsi_panel_op_set_hbm_mode(struct dsi_panel *panel, int level)
 			goto error;
 		} else {
 			rc = dsi_panel_tx_cmd_set(panel, DSI_CMD_SET_HBM_OFF);
-			printk(KERN_ERR
+			printk(KERN_DEBUG
 			       "When HBM OFF -->hbm_backight = %d panel->bl_config.bl_level =%d\n",
 			       panel->hbm_backlight, panel->bl_config.bl_level);
 			rc = dsi_panel_update_backlight(panel,
@@ -4204,7 +4204,7 @@ int dsi_panel_drv_deinit(struct dsi_panel *panel)
 	memset(&panel->mipi_device, 0x0, sizeof(panel->mipi_device));
 
 	//unregister_device
-	printk(KERN_ERR"unregister_device brightness_input_dev...\n");
+	printk(KERN_DEBUG"unregister_device brightness_input_dev...\n");
 	input_unregister_device(brightness_input_dev);
 	input_free_device(brightness_input_dev);
 
@@ -5041,7 +5041,7 @@ int dsi_panel_disable(struct dsi_panel *panel)
 		return -EINVAL;
 	}
 	pr_debug("dsi_panel_disable aod_mode =%d\n",panel->aod_mode);
-	printk(KERN_ERR"dsi_panel_disable ++\n");
+	printk(KERN_DEBUG"dsi_panel_disable ++\n");
 	mutex_lock(&panel->panel_lock);
 
 	/* Avoid sending panel off commands when ESD recovery is underway */
@@ -5084,7 +5084,7 @@ int dsi_panel_disable(struct dsi_panel *panel)
 	mutex_unlock(&panel->panel_lock);
 	/* add print actvie ws */
 	pm_print_active_wakeup_sources_queue(true);
-	printk(KERN_ERR"dsi_panel_disable --\n");
+	printk(KERN_DEBUG"dsi_panel_disable --\n");
 	return rc;
 }
 
@@ -5613,19 +5613,19 @@ int dsi_panel_set_aod_mode(struct dsi_panel *panel, int level)
 	if (panel->aod_disable) {
 		return 0;
 	}
-	printk(KERN_ERR "panel->aod_status ==%d\n", panel->aod_status);
+	printk(KERN_DEBUG "panel->aod_status ==%d\n", panel->aod_status);
 	mode = panel->cur_mode;
 	if (level == 1) {
 		if (panel->aod_status == 0) {
-			printk(KERN_ERR "send AOD ON commd mode 1 start \n");
+			printk(KERN_DEBUG "send AOD ON commd mode 1 start \n");
 			rc = dsi_panel_tx_cmd_set(panel, DSI_CMD_SET_AOD_ON_1);
-			printk(KERN_ERR "send AOD ON commd mode 1 end \n");
+			printk(KERN_DEBUG "send AOD ON commd mode 1 end \n");
 			panel->aod_status = 1;
 		}
 	} else if (level == 2) {
 		if (panel->aod_status == 0) {
 			panel->aod_status = 1;
-			printk(KERN_ERR "send AOD ON commd mode 2 start \n");
+			printk(KERN_DEBUG "send AOD ON commd mode 2 start \n");
 			rc = dsi_panel_tx_cmd_set(panel, DSI_CMD_SET_AOD_ON_2);
 			if (level == 2) {
 				tp_aod_flag = 100;
@@ -5637,7 +5637,7 @@ int dsi_panel_set_aod_mode(struct dsi_panel *panel, int level)
 				    (MSM_DRM_EARLY_EVENT_BLANK, &notifier_data);
 			}
 			aod_real_flag = false;
-			printk(KERN_ERR "send AOD ON commd mode 2 end   \n");
+			printk(KERN_DEBUG "send AOD ON commd mode 2 end   \n");
 		}
 	} else {
 		if (panel->aod_status) {
