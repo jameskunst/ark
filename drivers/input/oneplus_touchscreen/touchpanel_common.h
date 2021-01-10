@@ -27,6 +27,7 @@
 #include <linux/delay.h>
 #include <linux/oneplus/boot_mode.h>
 #include <linux/workqueue.h>
+#include <linux/pm_qos.h>
 
 #include "util_interface/touch_interfaces.h"
 #include "tp_devices.h"
@@ -352,6 +353,7 @@ struct touchpanel_data {
 	bool reject_point;	/*reject point for sensor */
 	u8 limit_switch;	/*0 is phone up 1 is crosswise */
 	u8 touchold_event;	/*0 is touchhold down 1 is up */
+	struct pm_qos_request pm_qos_req;
 
 #if defined(TPD_USE_EINT)
 	struct hrtimer timer;	/*using polling instead of IRQ */

@@ -15,6 +15,7 @@
 #include <linux/pinctrl/pinctrl.h>
 #include <linux/pinctrl/machine.h>
 #include <linux/regulator/consumer.h>
+#include <linux/pm_qos.h>
 
 #ifdef CONFIG_FB
 #include <linux/fb.h>
