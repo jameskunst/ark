@@ -670,27 +670,25 @@ static int sec_block_read(struct chip_data_s6sy761 *chip_info, u32 mem_addr,
 	cmd[4] = (u8) ((mem_addr >> 0) & 0xff);
 
 	ret = touch_i2c_write(chip_info->client, cmd, 5);
-	if (ret < 0) {
+	if (unlikely(ret < 0)) {
 		TPD_INFO("%s: send command failed, %02X\n", __func__, cmd[0]);
 		return -EIO;
 	}
 
-	udelay(10);
 	cmd[0] = (u8) SEC_CMD_FLASH_READ_SIZE;
 	cmd[1] = (u8) ((mem_size >> 8) & 0xff);
 	cmd[2] = (u8) ((mem_size >> 0) & 0xff);
 
 	ret = touch_i2c_write(chip_info->client, cmd, 3);
-	if (ret < 0) {
+	if (unlikely(ret < 0)) {
 		TPD_INFO("%s: send command failed, %02X\n", __func__, cmd[0]);
 		return -EIO;
 	}
 
-	udelay(10);
 	cmd[0] = (u8) SEC_CMD_FLASH_READ_DATA;
 
 	ret = touch_i2c_read(chip_info->client, cmd, 1, buf, mem_size);
-	if (ret < 0) {
+	if (unlikely(ret < 0)) {
 		TPD_INFO("%s: memory read failed\n", __func__);
 		return -EIO;
 	}
@@ -710,7 +708,7 @@ static int sec_memory_read(struct chip_data_s6sy761 *chip_info, u32 mem_addr,
 	u8 *tmp_data;
 
 	tmp_data = kmalloc(max_size, GFP_KERNEL | GFP_DMA);
-	if (!tmp_data) {
+	if (unlikely(!tmp_data)) {
 		TPD_INFO("%s: failed to kmalloc\n", __func__);
 		return -ENOMEM;
 	}
@@ -722,7 +720,7 @@ static int sec_memory_read(struct chip_data_s6sy761 *chip_info, u32 mem_addr,
 			ret =
 			    sec_block_read(chip_info, mem_addr, unit_size,
 					   tmp_data);
-			if (retry-- == 0) {
+			if (unlikely(retry-- == 0)) {
 				TPD_INFO
 				    ("%s: fw read fail mem_addr=%08X, unit_size=%d\n",
 				     __func__, mem_addr, unit_size);
