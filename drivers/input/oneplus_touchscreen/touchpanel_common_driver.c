@@ -14,10 +14,6 @@
 #include <linux/time.h>
 #include <linux/pm_wakeup.h>
 
-#ifndef TPD_USE_EINT
-#include <linux/hrtimer.h>
-#endif
-
 #ifdef CONFIG_FB
 #include <linux/fb.h>
 #include <linux/notifier.h>
@@ -75,9 +71,7 @@ static uint8_t Enable_gesture = 0;
 /*******Part2:declear Area********************************/
 static void speedup_resume(struct work_struct *work);
 
-#ifdef TPD_USE_EINT
 static irqreturn_t tp_irq_thread_fn(int irq, void *dev_id);
-#endif
 
 #if defined(CONFIG_FB) || defined(CONFIG_DRM_MSM)
 static int fb_notifier_callback(struct notifier_block *self,
@@ -927,20 +921,6 @@ static void tp_fw_update_work(struct work_struct *work)
 	return;
 }
 
-#ifndef TPD_USE_EINT
-static enum hrtimer_restart touchpanel_timer_func(struct hrtimer *timer)
-{
-	struct touchpanel_data *ts =
-	    container_of(timer, struct touchpanel_data, timer);
-
-	mutex_lock(&ts->mutex);
-	tp_work_func(ts);
-	mutex_unlock(&ts->mutex);
-	hrtimer_start(&ts->timer, ktime_set(0, 12500000), HRTIMER_MODE_REL);
-
-	return HRTIMER_NORESTART;
-}
-#else
 static irqreturn_t tp_irq_thread_fn(int irq, void *dev_id)
 {
 	struct touchpanel_data *ts = (struct touchpanel_data *)dev_id;
@@ -956,7 +936,6 @@ static irqreturn_t tp_irq_thread_fn(int irq, void *dev_id)
 	}
 	return IRQ_HANDLED;
 }
-#endif
 
 /*
  *    gesture_enable = 0 : disable gesture
@@ -3208,9 +3187,6 @@ static int tp_suspend(struct device *dev)
 		TPD_INFO("FW is updating while suspending");
 		goto NO_NEED_SUSPEND;
 	}
-#ifndef TPD_USE_EINT
-	hrtimer_cancel(&ts->timer);
-#endif
 
 	/* release all complete first */
 	if (ts->ts_ops->reinit_device) {
