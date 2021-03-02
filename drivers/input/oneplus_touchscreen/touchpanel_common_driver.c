@@ -925,20 +925,18 @@ static void tp_fw_update_work(struct work_struct *work)
 static irqreturn_t tp_irq_thread_fn(int irq, void *dev_id)
 {
 	struct touchpanel_data *ts = (struct touchpanel_data *)dev_id;
-	
-	pm_qos_update_request(&ts->pm_qos_req, 100);
-	
+
 	if (ts->int_mode == BANNABLE) {
+		pm_qos_update_request(&ts->pm_qos_req, 100);
 		__pm_stay_awake(&ts->source);	//avoid system enter suspend lead to i2c error
 		mutex_lock(&ts->mutex);
 		tp_work_func(ts);
 		mutex_unlock(&ts->mutex);
+		pm_qos_update_request(&ts->pm_qos_req, PM_QOS_DEFAULT_VALUE);
 		__pm_relax(&ts->source);
 	} else {
 		tp_work_func_unlock(ts);
 	}
-
-	 pm_qos_update_request(&ts->pm_qos_req, PM_QOS_DEFAULT_VALUE);
 	
 	return IRQ_HANDLED;
 }
@@ -2915,9 +2913,6 @@ int register_common_touch_device(struct touchpanel_data *pdata)
 	//step3 : mutex init
 	mutex_init(&ts->mutex);
 	
-	pm_qos_add_request(&ts->pm_qos_req, PM_QOS_CPU_DMA_LATENCY,
-		PM_QOS_DEFAULT_VALUE);
-		
 	init_completion(&ts->pm_complete);
 	init_completion(&ts->fw_complete);
 	init_completion(&ts->resume_complete);
@@ -2957,6 +2952,10 @@ int register_common_touch_device(struct touchpanel_data *pdata)
 		TPD_INFO("%s: tp power init failed.\n", __func__);
 		goto power_control_failed;
 	}
+	
+	pm_qos_add_request(&ts->pm_qos_req, PM_QOS_CPU_DMA_LATENCY,
+		PM_QOS_DEFAULT_VALUE);
+	
 	//step5 : I2C function check
 	if (!ts->is_noflash_ic) {
 		if (!i2c_check_functionality(ts->client->adapter, I2C_FUNC_I2C)) {
