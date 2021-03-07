@@ -791,8 +791,7 @@ static int smaps_pte_range(pmd_t *pmd, unsigned long addr, unsigned long end,
 
 	ptl = pmd_trans_huge_lock(pmd, vma);
 	if (ptl) {
-		if (pmd_present(*pmd))
-			smaps_pmd_entry(pmd, addr, walk);
+		smaps_pmd_entry(pmd, addr, walk);
 		spin_unlock(ptl);
 		goto out;
 	}
@@ -800,7 +799,7 @@ static int smaps_pte_range(pmd_t *pmd, unsigned long addr, unsigned long end,
 	if (pmd_trans_unstable(pmd))
 		goto out;
 	/*
-	 * The mmap_sem held all the way back in m_start() is what
+	 * The mmap_lock held all the way back in m_start() is what
 	 * keeps khugepaged out of here and from collapsing things
 	 * in here.
 	 */
