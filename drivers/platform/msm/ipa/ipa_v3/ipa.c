@@ -5251,47 +5251,6 @@ void ipa3_dec_client_disable_clks_no_block(
 		&ipa_dec_clients_disable_clks_on_wq_work);
 }
 
-/**
- * ipa3_inc_acquire_wakelock() - Increase active clients counter, and
- * acquire wakelock if necessary
- *
- * Return codes:
- * None
- */
-void ipa3_inc_acquire_wakelock(void)
-{
-	unsigned long flags;
-
-	spin_lock_irqsave(&ipa3_ctx->wakelock_ref_cnt.spinlock, flags);
-	ipa3_ctx->wakelock_ref_cnt.cnt++;
-	if (ipa3_ctx->wakelock_ref_cnt.cnt == 1)
-		__pm_stay_awake(&ipa3_ctx->w_lock);
-	IPADBG_LOW("active wakelock ref cnt = %d\n",
-		ipa3_ctx->wakelock_ref_cnt.cnt);
-	spin_unlock_irqrestore(&ipa3_ctx->wakelock_ref_cnt.spinlock, flags);
-}
-
-/**
- * ipa3_dec_release_wakelock() - Decrease active clients counter
- *
- * In case if the ref count is 0, release the wakelock.
- *
- * Return codes:
- * None
- */
-void ipa3_dec_release_wakelock(void)
-{
-	unsigned long flags;
-
-	spin_lock_irqsave(&ipa3_ctx->wakelock_ref_cnt.spinlock, flags);
-	ipa3_ctx->wakelock_ref_cnt.cnt--;
-	IPADBG_LOW("active wakelock ref cnt = %d\n",
-		ipa3_ctx->wakelock_ref_cnt.cnt);
-	if (ipa3_ctx->wakelock_ref_cnt.cnt == 0)
-		__pm_relax(&ipa3_ctx->w_lock);
-	spin_unlock_irqrestore(&ipa3_ctx->wakelock_ref_cnt.spinlock, flags);
-}
-
 int ipa3_set_clock_plan_from_pm(int idx)
 {
 	u32 clk_rate;
@@ -5491,7 +5450,6 @@ void ipa3_suspend_handler(enum ipa_irq_type interrupt,
 					 * acquire wake lock as long as suspend
 					 * vote is held
 					 */
-					ipa3_inc_acquire_wakelock();
 					ipa3_process_irq_schedule_rel();
 				}
 				mutex_unlock(pm_mutex_ptr);
@@ -5568,7 +5526,6 @@ static void ipa3_transport_release_resource(struct work_struct *work)
 			ipa3_process_irq_schedule_rel();
 		} else {
 			atomic_set(&ipa3_ctx->transport_pm.dec_clients, 0);
-			ipa3_dec_release_wakelock();
 			IPA_ACTIVE_CLIENTS_DEC_SPECIAL("TRANSPORT_RESOURCE");
 		}
 	}
@@ -7035,10 +6992,6 @@ static int ipa3_pre_init(const struct ipa3_plat_drv_res *resource_p,
 	}
 
 	ipa3_debugfs_pre_init();
-
-	/* Create a wakeup source. */
-	wakeup_source_init(&ipa3_ctx->w_lock, "IPA_WS");
-	spin_lock_init(&ipa3_ctx->wakelock_ref_cnt.spinlock);
 
 	/* Initialize Power Management framework */
 	if (ipa3_ctx->use_ipa_pm) {
