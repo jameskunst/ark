@@ -1424,11 +1424,6 @@ struct ipa3_active_clients {
 	int bus_vote_idx;
 };
 
-struct ipa3_wakelock_ref_cnt {
-	spinlock_t spinlock;
-	int cnt;
-};
-
 struct ipa3_tag_completion {
 	struct completion comp;
 	atomic_t cnt;
@@ -1861,7 +1856,6 @@ struct ipa3_eth_error_stats {
  * @apply_rg10_wa: Indicates whether to use register group 10 workaround
  * @gsi_ch20_wa: Indicates whether to apply GSI physical channel 20 workaround
  * @w_lock: Indicates the wakeup source.
- * @wakelock_ref_cnt: Indicates the number of times wakelock is acquired
  * @ipa_initialization_complete: Indicates that IPA is fully initialized
  * @ipa_ready_cb_list: A list of all the clients who require a CB when IPA
  *  driver is ready/initialized.
@@ -1999,7 +1993,6 @@ struct ipa3_context {
 	bool s1_bypass_arr[IPA_SMMU_CB_MAX];
 	u32 wdi_map_cnt;
 	struct wakeup_source w_lock;
-	struct ipa3_wakelock_ref_cnt wakelock_ref_cnt;
 	/* RMNET_IOCTL_INGRESS_FORMAT_AGG_DATA */
 	bool ipa_client_apps_wan_cons_agg_gro;
 	/* M-release support to know client pipes */
@@ -3136,8 +3129,6 @@ int ipa3_restore_suspend_handler(void);
 int ipa3_inject_dma_task_for_gsi(void);
 int ipa3_uc_panic_notifier(struct notifier_block *this,
 	unsigned long event, void *ptr);
-void ipa3_inc_acquire_wakelock(void);
-void ipa3_dec_release_wakelock(void);
 int ipa3_load_fws(const struct firmware *firmware, phys_addr_t gsi_mem_base,
 	enum gsi_ver);
 int emulator_load_fws(
