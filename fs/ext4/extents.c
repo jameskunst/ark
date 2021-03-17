@@ -584,7 +584,7 @@ errout:
 int ext4_ext_precache(struct inode *inode)
 {
 	struct ext4_inode_info *ei = EXT4_I(inode);
-	struct ext4_ext_path *path = NULL;
+	struct ext4_ext_path path;
 	struct buffer_head *bh;
 	int i = 0, depth, ret = 0;
 
@@ -594,35 +594,30 @@ int ext4_ext_precache(struct inode *inode)
 	down_read(&ei->i_data_sem);
 	depth = ext_depth(inode);
 
-	path = kzalloc(sizeof(struct ext4_ext_path) * (depth + 1),
-		       GFP_NOFS);
-	if (path == NULL) {
-		up_read(&ei->i_data_sem);
-		return -ENOMEM;
-	}
+	memset(&path, 0, sizeof(struct ext4_ext_path) * (depth + 1));
 
 	/* Don't cache anything if there are no external extent blocks */
 	if (depth == 0)
 		goto out;
-	path[0].p_hdr = ext_inode_hdr(inode);
-	ret = ext4_ext_check(inode, path[0].p_hdr, depth, 0);
+	path.p_hdr = ext_inode_hdr(inode);
+	ret = ext4_ext_check(inode, path.p_hdr, depth, 0);
 	if (ret)
 		goto out;
-	path[0].p_idx = EXT_FIRST_INDEX(path[0].p_hdr);
+	path.p_idx = EXT_FIRST_INDEX(path.p_hdr);
 	while (i >= 0) {
 		/*
 		 * If this is a leaf block or we've reached the end of
 		 * the index block, go up
 		 */
 		if ((i == depth) ||
-		    path[i].p_idx > EXT_LAST_INDEX(path[i].p_hdr)) {
-			brelse(path[i].p_bh);
-			path[i].p_bh = NULL;
+		    path.p_idx > EXT_LAST_INDEX(path.p_hdr)) {
+			brelse(path.p_bh);
+			path.p_bh = NULL;
 			i--;
 			continue;
 		}
 		bh = read_extent_tree_block(inode,
-					    ext4_idx_pblock(path[i].p_idx++),
+					    ext4_idx_pblock(path.p_idx++),
 					    depth - i - 1,
 					    EXT4_EX_FORCE_CACHE);
 		if (IS_ERR(bh)) {
@@ -630,15 +625,14 @@ int ext4_ext_precache(struct inode *inode)
 			break;
 		}
 		i++;
-		path[i].p_bh = bh;
-		path[i].p_hdr = ext_block_hdr(bh);
-		path[i].p_idx = EXT_FIRST_INDEX(path[i].p_hdr);
+		path.p_bh = bh;
+		path.p_hdr = ext_block_hdr(bh);
+		path.p_idx = EXT_FIRST_INDEX(path.p_hdr);
 	}
 	ext4_set_inode_state(inode, EXT4_STATE_EXT_PRECACHED);
 out:
 	up_read(&ei->i_data_sem);
-	ext4_ext_drop_refs(path);
-	kfree(path);
+	ext4_ext_drop_refs(&path);
 	return ret;
 }
 
