@@ -9234,7 +9234,7 @@ static enum blk_eh_timer_return ufshcd_eh_timed_out(struct scsi_cmnd *scmd)
  */
 static int ufshcd_query_ioctl(struct ufs_hba *hba, u8 lun, void __user *buffer)
 {
-	struct ufs_ioctl_query_data *ioctl_data;
+	struct ufs_ioctl_query_data ioctl_data[4] __aligned(8);
 	int err = 0;
 	int length = 0;
 	void *data_ptr;
@@ -9243,13 +9243,7 @@ static int ufshcd_query_ioctl(struct ufs_hba *hba, u8 lun, void __user *buffer)
 	u8 index;
 	u8 *desc = NULL;
 
-	ioctl_data = kzalloc(sizeof(struct ufs_ioctl_query_data), GFP_KERNEL);
-	if (!ioctl_data) {
-		dev_err(hba->dev, "%s: Failed allocating %zu bytes\n", __func__,
-				sizeof(struct ufs_ioctl_query_data));
-		err = -ENOMEM;
-		goto out;
-	}
+	memset(&ioctl_data, 0, sizeof(ioctl_data));
 
 	/* extract params from user buffer */
 	err = copy_from_user(ioctl_data, buffer,
@@ -9426,10 +9420,9 @@ out_einval:
 		__func__, ioctl_data->opcode, (unsigned int)ioctl_data->idn);
 	err = -EINVAL;
 out_release_mem:
-	kfree(ioctl_data);
 	kfree(desc);
-out:
-	return err;
+
+	return 0;
 }
 
 /**
