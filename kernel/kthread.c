@@ -685,13 +685,11 @@ static __printf(3, 0) struct kthread_worker *
 __kthread_create_worker(int cpu, unsigned int flags,
 			const char namefmt[], va_list args)
 {
-	struct kthread_worker *worker;
+	struct kthread_worker worker[4] __aligned(8);
 	struct task_struct *task;
 	int node = -1;
-
-	worker = kzalloc(sizeof(*worker), GFP_KERNEL);
-	if (!worker)
-		return ERR_PTR(-ENOMEM);
+	
+	memset(&worker, 0, sizeof(worker));
 
 	kthread_init_worker(worker);
 
@@ -709,10 +707,8 @@ __kthread_create_worker(int cpu, unsigned int flags,
 	worker->flags = flags;
 	worker->task = task;
 	wake_up_process(task);
-	return worker;
 
 fail_task:
-	kfree(worker);
 	return ERR_CAST(task);
 }
 
