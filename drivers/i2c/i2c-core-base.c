@@ -1832,12 +1832,12 @@ static int i2c_check_for_quirks(struct i2c_adapter *adap, struct i2c_msg *msgs, 
  * Adapter lock must be held when calling this function. No debug logging
  * takes place. adap->algo->master_xfer existence isn't checked.
  */
-int __i2c_transfer(struct i2c_adapter *adap, struct i2c_msg *msgs, int num)
+inline int __i2c_transfer(struct i2c_adapter *adap, struct i2c_msg *msgs, int num)
 {
 	unsigned long orig_jiffies;
 	int ret, try;
 
-	if (adap->quirks && i2c_check_for_quirks(adap, msgs, num))
+	if (unlikely(adap->quirks && i2c_check_for_quirks(adap, msgs, num)))
 		return -EOPNOTSUPP;
 
 	/* Retry automatically on arbitration loss */
@@ -1866,7 +1866,7 @@ EXPORT_SYMBOL(__i2c_transfer);
  * Note that there is no requirement that each message be sent to
  * the same slave address, although that is the most common model.
  */
-int i2c_transfer(struct i2c_adapter *adap, struct i2c_msg *msgs, int num)
+inline int i2c_transfer(struct i2c_adapter *adap, struct i2c_msg *msgs, int num)
 {
 	int ret;
 
