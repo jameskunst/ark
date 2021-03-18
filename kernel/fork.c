@@ -92,6 +92,7 @@
 #include <linux/thread_info.h>
 #include <linux/cpufreq_times.h>
 #include <linux/simple_lmk.h>
+#include <linux/pm_qos.h>
 
 #include <asm/pgtable.h>
 #include <asm/pgalloc.h>
@@ -2107,6 +2108,10 @@ long _do_fork(unsigned long clone_flags,
 	struct task_struct *p;
 	int trace = 0;
 	long nr;
+	
+	/* Disable lpm when userspace launches an app */
+	if (task_is_zygote(current))
+		msm_cpuidle_set_sleep_disable(true);
 
 	/*
 	 * Determine whether and which event to report to ptracer.  When
@@ -2154,6 +2159,9 @@ long _do_fork(unsigned long clone_flags,
 		}
 
 		wake_up_new_task(p);
+
+		/* Re-enable lpm after forking is complete */
+		msm_cpuidle_set_sleep_disable(false);
 
 		/* forking complete and child started to run, tell ptracer */
 		if (unlikely(trace))
