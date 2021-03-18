@@ -290,19 +290,6 @@ static enum hrtimer_restart lpm_hrtimer_cb(struct hrtimer *h)
 	return HRTIMER_NORESTART;
 }
 
-static void histtimer_cancel(void)
-{
-	unsigned int cpu = raw_smp_processor_id();
-	struct hrtimer *cpu_histtimer = &per_cpu(histtimer, cpu);
-	ktime_t time_rem;
-
-	time_rem = hrtimer_get_remaining(cpu_histtimer);
-	if (ktime_to_us(time_rem) <= 0)
-		return;
-
-	hrtimer_try_to_cancel(cpu_histtimer);
-}
-
 static enum hrtimer_restart histtimer_fn(struct hrtimer *h)
 {
 	int cpu = raw_smp_processor_id();
@@ -337,27 +324,6 @@ static void cluster_timer_init(struct lpm_cluster *cluster)
 
 		n = list_entry(list, typeof(*n), list);
 		cluster_timer_init(n);
-	}
-}
-
-static void clusttimer_cancel(void)
-{
-	int cpu = raw_smp_processor_id();
-	struct lpm_cluster *cluster = per_cpu(cpu_lpm, cpu)->parent;
-	ktime_t time_rem;
-
-	time_rem = hrtimer_get_remaining(&cluster->histtimer);
-	if (ktime_to_us(time_rem) > 0)
-		hrtimer_try_to_cancel(&cluster->histtimer);
-
-	if (cluster->parent) {
-		time_rem = hrtimer_get_remaining(
-			&cluster->parent->histtimer);
-
-		if (ktime_to_us(time_rem) <= 0)
-			return;
-
-		hrtimer_try_to_cancel(&cluster->parent->histtimer);
 	}
 }
 
@@ -1420,9 +1386,6 @@ static int lpm_cpuidle_enter(struct cpuidle_device *dev,
 	cpu_prepare(cpu, idx, true);
 	cluster_prepare(cpu->parent, cpumask, idx, true, start_time);
 
-	trace_cpu_idle_enter(idx);
-	lpm_stats_cpu_enter(idx, start_time);
-
 	if (need_resched())
 		goto exit;
 
@@ -1432,17 +1395,11 @@ static int lpm_cpuidle_enter(struct cpuidle_device *dev,
 
 exit:
 	end_time = ktime_to_ns(ktime_get());
-	lpm_stats_cpu_exit(idx, end_time, success);
 
 	cluster_unprepare(cpu->parent, cpumask, idx, true, end_time, success);
 	cpu_unprepare(cpu, idx, true);
 	dev->last_residency = ktime_us_delta(ktime_get(), start);
 	update_history(dev, idx);
-	trace_cpu_idle_exit(idx, success);
-	if (lpm_prediction && cpu->lpm_prediction) {
-		histtimer_cancel();
-		clusttimer_cancel();
-	}
 	if (cpu->bias) {
 		biastimer_cancel();
 		cpu->bias = 0;
