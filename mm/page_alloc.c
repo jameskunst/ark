@@ -71,6 +71,8 @@
 #include <linux/nmi.h>
 #include <linux/khugepaged.h>
 #include <linux/psi.h>
+#include <linux/pm_qos.h>
+#include <linux/delay.h>
 
 #include <asm/sections.h>
 #include <asm/tlbflush.h>
@@ -4174,6 +4176,9 @@ retry:
 	 */
 	if (costly_order && !(gfp_mask & __GFP_RETRY_MAYFAIL))
 		goto nopage;
+		
+	/* Disable lpm when memory is low */
+	msm_cpuidle_set_sleep_disable(true);
 
 	if (should_reclaim_retry(gfp_mask, order, ac, alloc_flags,
 				 did_some_progress > 0, &no_progress_loops))
@@ -4214,6 +4219,8 @@ retry:
 		no_progress_loops = 0;
 		goto retry;
 	}
+	
+	msm_cpuidle_set_sleep_disable(false);
 
 nopage:
 	/* Deal with possible cpuset update races before we fail */
