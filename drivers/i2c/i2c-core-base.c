@@ -49,9 +49,6 @@
 
 #include "i2c-core.h"
 
-#define CREATE_TRACE_POINTS
-#include <trace/events/i2c.h>
-
 #define I2C_ADDR_OFFSET_TEN_BIT	0xa000
 #define I2C_ADDR_OFFSET_SLAVE	0x1000
 
@@ -67,19 +64,7 @@ static DEFINE_IDR(i2c_adapter_idr);
 
 static int i2c_detect(struct i2c_adapter *adapter, struct i2c_driver *driver);
 
-static struct static_key i2c_trace_msg = STATIC_KEY_INIT_FALSE;
 static bool is_registered;
-
-int i2c_transfer_trace_reg(void)
-{
-	static_key_slow_inc(&i2c_trace_msg);
-	return 0;
-}
-
-void i2c_transfer_trace_unreg(void)
-{
-	static_key_slow_dec(&i2c_trace_msg);
-}
 
 const struct i2c_device_id *i2c_match_id(const struct i2c_device_id *id,
 						const struct i2c_client *client)
@@ -1772,7 +1757,6 @@ static void __exit i2c_exit(void)
 	class_compat_unregister(i2c_adapter_compat_class);
 #endif
 	bus_unregister(&i2c_bus_type);
-	tracepoint_synchronize_unregister();
 }
 
 /* We must initialize early, because some subsystems register i2c drivers
@@ -1857,26 +1841,13 @@ static int i2c_check_for_quirks(struct i2c_adapter *adap, struct i2c_msg *msgs, 
  * Adapter lock must be held when calling this function. No debug logging
  * takes place. adap->algo->master_xfer existence isn't checked.
  */
-int __i2c_transfer(struct i2c_adapter *adap, struct i2c_msg *msgs, int num)
+inline int __i2c_transfer(struct i2c_adapter *adap, struct i2c_msg *msgs, int num)
 {
 	unsigned long orig_jiffies;
 	int ret, try;
 
-	if (adap->quirks && i2c_check_for_quirks(adap, msgs, num))
+	if (unlikely(adap->quirks && i2c_check_for_quirks(adap, msgs, num)))
 		return -EOPNOTSUPP;
-
-	/* i2c_trace_msg gets enabled when tracepoint i2c_transfer gets
-	 * enabled.  This is an efficient way of keeping the for-loop from
-	 * being executed when not needed.
-	 */
-	if (static_key_false(&i2c_trace_msg)) {
-		int i;
-		for (i = 0; i < num; i++)
-			if (msgs[i].flags & I2C_M_RD)
-				trace_i2c_read(adap, &msgs[i], i);
-			else
-				trace_i2c_write(adap, &msgs[i], i);
-	}
 
 	/* Retry automatically on arbitration loss */
 	orig_jiffies = jiffies;
@@ -1886,14 +1857,6 @@ int __i2c_transfer(struct i2c_adapter *adap, struct i2c_msg *msgs, int num)
 			break;
 		if (time_after(jiffies, orig_jiffies + adap->timeout))
 			break;
-	}
-
-	if (static_key_false(&i2c_trace_msg)) {
-		int i;
-		for (i = 0; i < ret; i++)
-			if (msgs[i].flags & I2C_M_RD)
-				trace_i2c_reply(adap, &msgs[i], i);
-		trace_i2c_result(adap, i, ret);
 	}
 
 	return ret;
@@ -1912,7 +1875,7 @@ EXPORT_SYMBOL(__i2c_transfer);
  * Note that there is no requirement that each message be sent to
  * the same slave address, although that is the most common model.
  */
-int i2c_transfer(struct i2c_adapter *adap, struct i2c_msg *msgs, int num)
+inline int i2c_transfer(struct i2c_adapter *adap, struct i2c_msg *msgs, int num)
 {
 	int ret;
 
