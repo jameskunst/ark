@@ -119,6 +119,7 @@ enum task_boost_type {
 	TASK_BOOST_END,
 };
 
+#if 0
 /*
  * Enum for display driver to provide varying refresh rates
  */
@@ -130,6 +131,7 @@ enum fps {
 	FPS90 = 90,
 	FPS120 = 120,
 };
+#endif
 
 #ifdef CONFIG_DEBUG_ATOMIC_SLEEP
 
@@ -576,7 +578,7 @@ extern void sched_update_cpu_freq_min_max(const cpumask_t *cpus, u32 fmin,
 					  u32 fmax);
 extern int sched_set_boost(int enable);
 extern void free_task_load_ptrs(struct task_struct *p);
-extern void sched_set_refresh_rate(enum fps fps);
+//extern void sched_set_refresh_rate(enum fps fps);
 
 #define RAVG_HIST_SIZE_MAX 5
 #define NUM_BUSY_BUCKETS 10
@@ -646,7 +648,7 @@ static inline int sched_set_boost(int enable)
 static inline void sched_update_cpu_freq_min_max(const cpumask_t *cpus,
 					u32 fmin, u32 fmax) { }
 
-static inline void sched_set_refresh_rate(enum fps fps) { }
+//static inline void sched_set_refresh_rate(enum fps fps) { }
 #endif /* CONFIG_SCHED_WALT */
 
 struct sched_rt_entity {
