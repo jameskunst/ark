@@ -23,7 +23,6 @@
 #include "msm_kms.h"
 #include "msm_gem.h"
 #include "msm_fence.h"
-#include "sde_trace.h"
 
 #define MULTIPLE_CONN_DETECTED(x) (x > 1)
 
@@ -231,7 +230,6 @@ msm_disable_outputs(struct drm_device *dev, struct drm_atomic_state *old_state)
 	struct msm_drm_notifier notifier_data;
 	int i, blank;
 
-	SDE_ATRACE_BEGIN("msm_disable");
 	for_each_connector_in_state(old_state, connector, old_conn_state, i) {
 		const struct drm_encoder_helper_funcs *funcs;
 		struct drm_encoder *encoder;
@@ -327,7 +325,6 @@ msm_disable_outputs(struct drm_device *dev, struct drm_atomic_state *old_state)
 		else
 			funcs->dpms(crtc, DRM_MODE_DPMS_OFF);
 	}
-	SDE_ATRACE_END("msm_disable");
 }
 
 static void
@@ -446,7 +443,6 @@ static void msm_atomic_helper_commit_modeset_enables(struct drm_device *dev,
 	int i, blank;
 	bool splash = false;
 
-	SDE_ATRACE_BEGIN("msm_enable");
 	for_each_oldnew_crtc_in_state(old_state, crtc, old_crtc_state,
 			new_crtc_state, i) {
 		const struct drm_crtc_helper_funcs *funcs;
@@ -539,7 +535,6 @@ static void msm_atomic_helper_commit_modeset_enables(struct drm_device *dev,
 
 	/* If no bridges were pre_enabled, skip iterating over them again */
 	if (bridge_enable_count == 0) {
-		SDE_ATRACE_END("msm_enable");
 		return;
 	}
 
@@ -575,7 +570,6 @@ static void msm_atomic_helper_commit_modeset_enables(struct drm_device *dev,
 					    &notifier_data);
 		}
 	}
-	SDE_ATRACE_END("msm_enable");
 }
 
 /* The (potentially) asynchronous part of the commit.  At this point
@@ -635,9 +629,7 @@ static void _msm_drm_commit_work_cb(struct kthread_work *work)
 
 	commit = container_of(work, struct msm_commit, commit_work);
 
-	SDE_ATRACE_BEGIN("complete_commit");
 	complete_commit(commit);
-	SDE_ATRACE_END("complete_commit");
 }
 
 static struct msm_commit *commit_init(struct drm_atomic_state *state,
@@ -745,10 +737,8 @@ int msm_atomic_commit(struct drm_device *dev,
 		return -EINVAL;
 	}
 
-	SDE_ATRACE_BEGIN("atomic_commit");
 	ret = drm_atomic_helper_prepare_planes(dev, state);
 	if (ret) {
-		SDE_ATRACE_END("atomic_commit");
 		return ret;
 	}
 
@@ -826,14 +816,12 @@ int msm_atomic_commit(struct drm_device *dev,
 	drm_atomic_state_get(state);
 	msm_atomic_commit_dispatch(dev, state, c);
 
-	SDE_ATRACE_END("atomic_commit");
 	return 0;
 
 err_free:
 	kfree(c);
 error:
 	drm_atomic_helper_cleanup_planes(dev, state);
-	SDE_ATRACE_END("atomic_commit");
 	return ret;
 }
 
