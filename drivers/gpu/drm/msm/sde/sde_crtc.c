@@ -5895,10 +5895,8 @@ static int sde_crtc_onscreenfinger_atomic_check(struct sde_crtc_state *cstate,
 
          if (aod_index >= 0) {
 			if (aod_mode == 1) {
-                SDE_ATRACE_BEGIN("aod_layer_hid");
 				pstates[aod_index].sde_pstate->property_values[PLANE_PROP_ALPHA].value = 0;
 				aod_index = -1;
-                SDE_ATRACE_END("aod_layer_hid");
 			}
 		}
 
