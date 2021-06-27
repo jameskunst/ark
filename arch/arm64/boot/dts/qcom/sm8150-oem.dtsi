@@ -382,6 +382,7 @@
 /* Touch */
 &qupv3_se17_i2c {
 	status = "ok";
+	qcom,clk-freq-out = <1000000>;
 	sec-s6sy761@48 {
 		compatible = "sec-s6sy761";
 		reg = <0x48>;
@@ -414,6 +415,7 @@
 };
 &qupv3_se17_i2c {
 	status = "ok";
+	qcom,clk-freq-out = <1000000>;
 	synaptics-s3706@20 {
 		compatible = "synaptics-s3706";
 		reg = <0x20>;
