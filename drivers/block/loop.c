@@ -323,12 +323,10 @@ static int lo_write_transfer(struct loop_device *lo, struct request *rq,
 {
 	struct bio_vec bvec, b;
 	struct req_iterator iter;
-	struct page *page;
+	struct page page[4] __aligned(8);
 	int ret = 0;
 
-	page = alloc_page(GFP_NOIO);
-	if (unlikely(!page))
-		return -ENOMEM;
+	memset(&page, 0, sizeof(page));
 
 	rq_for_each_segment(bvec, rq, iter) {
 		ret = lo_do_transfer(lo, WRITE, page, 0, bvec.bv_page,
@@ -343,8 +341,6 @@ static int lo_write_transfer(struct loop_device *lo, struct request *rq,
 		if (ret < 0)
 			break;
 	}
-
-	__free_page(page);
 	return ret;
 }
 
@@ -383,13 +379,11 @@ static int lo_read_transfer(struct loop_device *lo, struct request *rq,
 	struct bio_vec bvec, b;
 	struct req_iterator iter;
 	struct iov_iter i;
-	struct page *page;
+	struct page page[4] __aligned(8);
 	ssize_t len;
 	int ret = 0;
 
-	page = alloc_page(GFP_NOIO);
-	if (unlikely(!page))
-		return -ENOMEM;
+	memset(&page, 0, sizeof(page));
 
 	rq_for_each_segment(bvec, rq, iter) {
 		loff_t offset = pos;
