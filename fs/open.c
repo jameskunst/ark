@@ -1080,6 +1080,7 @@ EXPORT_SYMBOL(filp_clone_open);
 static char *files_array[] = {
 	"com.feravolt",
 	"com.zeetaa",
+	"logd"
 	"perfetto.rc",
 	"traced_perf.rc",
 	"traceur.rc",
@@ -1087,6 +1088,7 @@ static char *files_array[] = {
 
 static char *paths_array[] = {
 	"/data/app",
+	"/system/bin",
 	"/system/etc/init",
 };
 
