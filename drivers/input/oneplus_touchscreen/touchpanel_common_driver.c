@@ -925,15 +925,20 @@ static void tp_fw_update_work(struct work_struct *work)
 static irqreturn_t tp_irq_thread_fn(int irq, void *dev_id)
 {
 	struct touchpanel_data *ts = (struct touchpanel_data *)dev_id;
+	struct pm_qos_request req = {
+		.type = PM_QOS_REQ_AFFINE_CORES,
+		.cpus_affine = ATOMIC_INIT(BIT(raw_smp_processor_id()) |
+					   *cpumask_bits(cpu_perf_mask))
+	};
 
 	if (ts->int_mode == BANNABLE) {
-		pm_qos_update_request(&ts->pm_qos_req, 100);
+		pm_qos_add_request(&req, PM_QOS_CPU_DMA_LATENCY, 100);
 		__pm_stay_awake(&ts->source);	//avoid system enter suspend lead to i2c error
 		mutex_lock(&ts->mutex);
 		tp_work_func(ts);
 		mutex_unlock(&ts->mutex);
-		pm_qos_update_request(&ts->pm_qos_req, PM_QOS_DEFAULT_VALUE);
 		__pm_relax(&ts->source);
+		pm_qos_remove_request(&req);
 	} else {
 		tp_work_func_unlock(ts);
 	}
@@ -2953,9 +2958,6 @@ int register_common_touch_device(struct touchpanel_data *pdata)
 		goto power_control_failed;
 	}
 	
-	pm_qos_add_request(&ts->pm_qos_req, PM_QOS_CPU_DMA_LATENCY,
-		PM_QOS_DEFAULT_VALUE);
-	
 	//step5 : I2C function check
 	if (!ts->is_noflash_ic) {
 		if (!i2c_check_functionality(ts->client->adapter, I2C_FUNC_I2C)) {
@@ -3131,8 +3133,6 @@ int register_common_touch_device(struct touchpanel_data *pdata)
 	kfree(ts->panel_data.fw_name);
 
  free_touch_panel_input:
- 	pm_qos_remove_request(&ts->pm_qos_req);
- 
 	input_unregister_device(ts->input_dev);
 	input_unregister_device(ts->kpd_input_dev);
 	input_unregister_device(ps_input_dev);
