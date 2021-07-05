@@ -21,7 +21,6 @@
 
 #include <linux/msm_ion.h>
 #include <linux/pm_domain.h>
-#include <linux/pm_qos.h>
 
 #include "msm_drv.h"
 #include "msm_kms.h"
@@ -260,7 +259,6 @@ struct sde_kms {
 	bool first_kickoff;
 	bool qdss_enabled;
 
-	struct pm_qos_request pm_qos_irq_req;
 };
 
 struct vsync_info {

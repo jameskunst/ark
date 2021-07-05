@@ -34,7 +34,6 @@
 #include <linux/msm_drm_notify.h>
 #include <linux/notifier.h>
 #include <linux/sched.h>
-#include <linux/pm_qos.h>
 #include <linux/cpufreq.h>
 #include <linux/pm_wakeup.h>
 #include <linux/input.h>

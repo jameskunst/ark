@@ -1033,8 +1033,6 @@ struct sde_perf_cdp_cfg {
  * @sfe_lut_tbl: LUT tables for safe signals
  * @qos_lut_tbl: LUT tables for QoS signals
  * @cdp_cfg            cdp use case configurations
- * @cpu_mask:          pm_qos cpu mask value
- * @cpu_dma_latency:   pm_qos cpu dma latency value
  * @axi_bus_width:     axi bus width value in bytes
  * @num_mnoc_ports:    number of mnoc ports
  */
@@ -1061,8 +1059,6 @@ struct sde_perf_cfg {
 	struct sde_qos_lut_tbl sfe_lut_tbl[SDE_QOS_LUT_USAGE_MAX];
 	struct sde_qos_lut_tbl qos_lut_tbl[SDE_QOS_LUT_USAGE_MAX];
 	struct sde_perf_cdp_cfg cdp_cfg[SDE_PERF_CDP_USAGE_MAX];
-	u32 cpu_mask;
-	u32 cpu_dma_latency;
 	u32 axi_bus_width;
 	u32 num_mnoc_ports;
 };
