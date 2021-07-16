@@ -1,18 +1,20 @@
-/* memcmp - compare memory
+/* SPDX-License-Identifier: GPL-2.0-only */
+/*
+ * Copyright (c) 2013-2021, Arm Limited.
  *
- * Copyright (c) 2013-2020, Arm Limited.
- * SPDX-License-Identifier: MIT
+ * Adapted from the original at:
+ * https://github.com/ARM-software/optimized-routines/blob/e823e3abf5f89ecb/string/aarch64/memcmp.S
  */
+
+#include <linux/linkage.h>
+#include <asm/assembler.h>
 
 /* Assumptions:
  *
  * ARMv8-a, AArch64, unaligned accesses.
  */
 
-#include <linux/linkage.h>
-#include <asm/assembler.h>
-
-#define L(l) .L ## l
+#define L(label) .L ## label
 
 /* Parameters and result.  */
 #define src1		x0
@@ -30,8 +32,7 @@
 #define tmp1		x7
 #define tmp2		x8
 
-.p2align 6
-WEAK(memcmp)
+SYM_FUNC_START_WEAK_PI(memcmp)
 	subs	limit, limit, 8
 	b.lo	L(less8)
 
@@ -94,7 +95,7 @@ L(last_bytes):
 	add	src2, src2, limit
 	ldp	data1, data1h, [src1]
 	ldp	data2, data2h, [src2]
-	cmp     data1, data2
+	cmp	data1, data2
 	bne	L(return)
 	mov	data1, data1h
 	mov	data2, data2h
@@ -102,11 +103,11 @@ L(last_bytes):
 
 	/* Compare data bytes and set return value to 0, -1 or 1.  */
 L(return):
-#ifndef CONFIG_CPU_BIG_ENDIAN
+#ifndef __AARCH64EB__
 	rev	data1, data1
 	rev	data2, data2
 #endif
-	cmp     data1, data2
+	cmp	data1, data2
 L(ret_eq):
 	cset	result, ne
 	cneg	result, result, lo
@@ -134,5 +135,4 @@ L(byte_loop):
 	sub	result, data1w, data2w
 	ret
 
-ENDPIPROC(memcmp)
-
+SYM_FUNC_END_PI(memcmp)
