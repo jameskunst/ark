@@ -306,7 +306,7 @@ int devfreq_add_devbw(struct device *dev)
 	d->num_paths = num_paths;
 
 	p = &d->dp;
-	p->polling_ms = 50;
+	p->polling_ms = 200;
 
 	if (strnstr(d->bw_data.name, "soc:qcom,cpu-cpu-llcc-bw",
 				strlen(d->bw_data.name)) != NULL) {
