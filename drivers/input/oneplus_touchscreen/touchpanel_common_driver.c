@@ -2938,6 +2938,13 @@ err_irq:
 	return ret;
 }
 
+static void tp_unregister_irq_func(struct touchpanel_data *ts)
+{
+	pm_qos_remove_request(&ts->pm_touch_req);
+	pm_qos_remove_request(&ts->pm_i2c_req);
+	free_irq(ts->irq, ts);
+}
+
 static void tp_util_get_vendor(struct touchpanel_data *ts,
 			struct panel_info *panel_data)
 {
@@ -3258,7 +3265,7 @@ int register_common_touch_device(struct touchpanel_data *pdata)
 	return 0;
 
  threaded_irq_free:
-	free_irq(ts->irq, ts);
+	tp_unregister_irq_func(ts);
 
  manu_info_alloc_err:
 	kfree(ts->panel_data.manufacture_info.version);
@@ -3422,7 +3429,7 @@ static void tp_resume(struct device *dev)
 		goto NO_NEED_RESUME;
 
 	//free irq at first
-	free_irq(ts->irq, ts);
+	tp_unregister_irq_func(ts);
 
 	if (ts->ts_ops->reinit_device) {
 		ts->ts_ops->reinit_device(ts->chip_data);
