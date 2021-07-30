@@ -3573,6 +3573,8 @@ static int sde_rotator_probe(struct platform_device *pdev)
 		}
 		rot_dev->kthread_free[i] = true;
 	}
+	
+	device_enable_async_suspend(&pdev->dev);
 
 	device_enable_async_suspend(&pdev->dev);
 
