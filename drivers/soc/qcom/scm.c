@@ -1123,6 +1123,7 @@ u32 scm_get_version(void)
 
 	r0 = 0x1 << 8;
 	r1 = (uintptr_t)&context_id;
+
 	do {
 		asm volatile(
 			__asmeq("%0", R0_STR)
