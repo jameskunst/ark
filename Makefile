@@ -438,6 +438,9 @@ endif
 # Avoid gcc-10 regression
 KBUILD_CFLAGS	+= --param=max-inline-insns-auto=1000
 
+# Inlining optimisation
+KBUILD_CFLAGS	+= --param inline-heuristics-hint-percent=100
+
 # Optimization for sm8150
 KBUILD_CFLAGS	+= -mcpu=cortex-a76.cortex-a55+crc+crypto -Werror=vla
 
