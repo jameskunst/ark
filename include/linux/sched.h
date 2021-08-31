@@ -782,6 +782,11 @@ struct task_struct {
 	/* Per task flags (PF_*), defined further below: */
 	unsigned int			flags;
 	unsigned int			ptrace;
+	
+	bool dump_fd_leak;
+
+	int compensate_time;
+	int compensate_need;
 
 #ifdef CONFIG_SMP
 	struct llist_node		wake_entry;

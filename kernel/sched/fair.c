@@ -5303,7 +5303,7 @@ enqueue_task_fair(struct rq *rq, struct task_struct *p, int flags)
 	struct sched_entity *se = &p->se;
 	int task_new = !(flags & ENQUEUE_WAKEUP);
 	int idle_h_nr_running = idle_policy(p->policy);
-
+	
 #ifdef CONFIG_SCHED_WALT
 	p->misfit = !task_fits_max(p, rq->cpu);
 #endif
@@ -5402,8 +5402,6 @@ static void dequeue_task_fair(struct rq *rq, struct task_struct *p, int flags)
 
 	if (task_sleep && rq->nr_running == 1)
 		flags |= DEQUEUE_IDLE;
-
-	opc_task_switch(false, cpu_of(rq), p, rq->clock);
 
 	/*
 	 * The code below (indirectly) updates schedutil which looks at
@@ -7489,7 +7487,6 @@ static int get_start_cpu(struct task_struct *p)
 			task_boost == TASK_BOOST_ON_MID;
 	bool task_skip_min = (sched_boost() != CONSERVATIVE_BOOST)
 				&& get_rtg_status(p) && p->unfilter;
-	bool is_uxtop = is_opc_task(p, UT_FORE);
 
 	/*
 	 * note about min/mid/max_cap_orig_cpu - either all of them will be -ve
@@ -8218,7 +8215,6 @@ static int find_energy_efficient_cpu(struct sched_domain *sd,
 	int next_cpu = -1, backup_cpu = -1;
 	int task_boost = per_task_boost(p);
 	int boosted = (schedtune_task_boost(p) > 0) || (task_boost > 0);
-	bool is_uxtop = is_opc_task(p, UT_FORE);
 	int start_cpu;
 
 	if (is_many_wakeup(sibling_count_hint) && prev_cpu != cpu &&
@@ -8242,8 +8238,7 @@ static int find_energy_efficient_cpu(struct sched_domain *sd,
 		sync = 0;
 
 	if (sysctl_sched_sync_hint_enable && sync &&
-				bias_to_this_cpu(p, cpu, start_cpu) &&
-				opc_check_uxtop_cpu(is_uxtop, cpu)) {
+				bias_to_this_cpu(p, cpu, start_cpu)) {
 		target_cpu = cpu;
 		fbt_env.fastpath = SYNC_WAKEUP;
 		goto out;
@@ -8324,7 +8319,7 @@ static int find_energy_efficient_cpu(struct sched_domain *sd,
 #endif
 
 		if (task_placement_boost_enabled(p) || fbt_env.need_idle || boosted ||
-		    is_rtg || __cpu_overutilized(prev_cpu, delta) || is_uxtop ||
+		    is_rtg || __cpu_overutilized(prev_cpu, delta) ||
 		    !task_fits_max(p, prev_cpu) || cpu_isolated(prev_cpu))
 			goto out;
 
@@ -8356,10 +8351,6 @@ out:
 	if (target_cpu < 0)
 		target_cpu = prev_cpu;
 
-	trace_sched_task_util(p, next_cpu, backup_cpu, target_cpu, sync,
-			fbt_env.need_idle, fbt_env.fastpath, placement_boost,
-			start_t, is_uxtop, boosted, is_rtg, get_rtg_status(p),
-			start_cpu);
 	return target_cpu;
 }
 
@@ -9101,6 +9092,8 @@ enum group_type {
 #define LBF_SOME_PINNED	0x08
 #define LBF_IGNORE_BIG_TASKS 0x100
 #define LBF_IGNORE_PREFERRED_CLUSTER_TASKS 0x200
+#define LBF_IGNORE_UX_TOP 0x800
+#define LBF_IGNORE_SLAVE 0xC00
 
 struct lb_env {
 	struct sched_domain	*sd;
@@ -9417,7 +9410,6 @@ static int detach_tasks(struct lb_env *env)
 	unsigned long load = 0;
 	int detached = 0;
 	int orig_loop = env->loop;
-	int src_claim = opc_get_claim_on_cpu(env->src_cpu);
 	u64 start_t = rq_clock(env->src_rq);
 
 	lockdep_assert_held(&env->src_rq->lock);
@@ -9432,11 +9424,7 @@ static int detach_tasks(struct lb_env *env)
 		if (capacity_orig_of(env->dst_cpu) <
 				capacity_orig_of(env->src_cpu)) {
 			env->flags |= LBF_IGNORE_BIG_TASKS;
-	}
-		if (src_claim == 1)
-			env->flags |= LBF_IGNORE_UX_TOP | LBF_IGNORE_SLAVE;
-		else if (src_claim == -1)
-			env->flags |= LBF_IGNORE_SLAVE;
+		}
 	}
 
 redo:
