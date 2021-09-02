@@ -5,18 +5,20 @@
 #include <linux/sched/signal.h>
 #include <linux/sched/debug.h>
 #include <linux/hash.h>
+#include <linux/memblock.h>
+#include "sched.h"
 
-#define WAIT_TABLE_BITS 8
-#define WAIT_TABLE_SIZE (1 << WAIT_TABLE_BITS)
-
-static wait_queue_head_t bit_wait_table[WAIT_TABLE_SIZE] __cacheline_aligned;
+#define BIT_WAIT_TABLE_SIZE (1 << BIT_WAIT_TABLE_BITS)
+#define BIT_WAIT_TABLE_BITS bit_wait_table_bits
+static unsigned int bit_wait_table_bits __ro_after_init;
+static wait_queue_head_t *bit_wait_table __ro_after_init;
 
 wait_queue_head_t *bit_waitqueue(void *word, int bit)
 {
 	const int shift = BITS_PER_LONG == 32 ? 5 : 6;
 	unsigned long val = (unsigned long)word << shift | bit;
 
-	return bit_wait_table + hash_long(val, WAIT_TABLE_BITS);
+	return bit_wait_table + hash_long(val, BIT_WAIT_TABLE_BITS);
 }
 EXPORT_SYMBOL(bit_waitqueue);
 
@@ -159,7 +161,7 @@ static inline wait_queue_head_t *atomic_t_waitqueue(atomic_t *p)
 		unsigned long q = (unsigned long)p;
 		return bit_waitqueue((void *)(q & ~1), q & 1);
 	}
-	return bit_waitqueue(p, 0);
+	return bit_wait_table + hash_ptr(p, BIT_WAIT_TABLE_BITS);
 }
 
 static int wake_atomic_t_function(struct wait_queue_entry *wq_entry, unsigned mode, int sync,
@@ -281,6 +283,16 @@ void __init wait_bit_init(void)
 {
 	int i;
 
-	for (i = 0; i < WAIT_TABLE_SIZE; i++)
+bit_wait_table = alloc_large_system_hash("bit waitqueue hash",
+						sizeof(wait_queue_head_t),
+						0,
+						22,
+						0,
+						&bit_wait_table_bits,
+						NULL,
+						0,
+						0);
+
+	for (i = 0; i < BIT_WAIT_TABLE_SIZE; i++)
 		init_waitqueue_head(bit_wait_table + i);
 }
