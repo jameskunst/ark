@@ -20,6 +20,7 @@
 #include <linux/pagevec.h>
 #include <linux/uio.h>
 #include <linux/uuid.h>
+#include <linux/uidgid.h>
 #include <linux/file.h>
 #include <linux/sched/signal.h>
 
@@ -263,12 +264,16 @@ static int f2fs_do_sync_file(struct file *file, loff_t start, loff_t end,
 		.for_reclaim = 0,
 	};
 	unsigned int seq_id = 0;
+	ktime_t start_time, delta;
+	unsigned long long duration;
 
 	if (unlikely(f2fs_readonly(inode->i_sb) ||
 				is_sbi_flag_set(sbi, SBI_CP_DISABLED)))
 		return 0;
 
 	trace_f2fs_sync_file_enter(inode);
+
+	start_time = ktime_get();
 
 	if (S_ISDIR(inode->i_mode))
 		goto go_write;
@@ -315,6 +320,7 @@ go_write:
 	up_read(&F2FS_I(inode)->i_sem);
 
 	if (cp_reason) {
+		stat_inc_cp_reason(sbi, cp_reason);
 		/* all the dirty node pages should be flushed for POR */
 		ret = f2fs_sync_fs(inode->i_sb, 1);
 
@@ -373,8 +379,9 @@ flush_out:
 	}
 	f2fs_update_time(sbi, REQ_TIME);
 out:
-	trace_f2fs_sync_file_exit(inode, cp_reason, datasync, ret);
-	f2fs_trace_ios(NULL, 1);
+	delta = ktime_sub(ktime_get(), start_time);
+	duration = (unsigned long long) ktime_to_ns(delta) / (1000 * 1000);
+
 	return ret;
 }
 

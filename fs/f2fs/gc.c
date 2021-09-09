@@ -3,6 +3,7 @@
  * fs/f2fs/gc.c
  *
  * Copyright (c) 2012 Samsung Electronics Co., Ltd.
+ * Copyright (C) 2021 XiaoMi, Inc.
  *             http://www.samsung.com/
  */
 #include <linux/fs.h>
@@ -55,21 +56,40 @@ static inline void rapid_gc_set_wakelock(void)
 static unsigned int count_bits(const unsigned long *addr,
 				unsigned int offset, unsigned int len);
 
+static inline bool should_break_gc(struct f2fs_sb_info *sbi)
+{
+	if (freezing(current) || kthread_should_stop())
+		return true;
+
+	if (sbi->gc_mode == GC_URGENT_HIGH)
+		return false;
+
+	return !is_idle(sbi, GC_TIME);
+}
+
 static int gc_thread_func(void *data)
 {
 	struct f2fs_sb_info *sbi = data;
 	struct f2fs_gc_kthread *gc_th = sbi->gc_thread;
 	wait_queue_head_t *wq = &sbi->gc_thread->gc_wait_queue_head;
-	unsigned int wait_ms = gc_th->min_sleep_time;
+	wait_queue_head_t *fggc_wq = &sbi->gc_thread->fggc_wq;
+	unsigned int wait_ms, gc_count, i;
+	bool boost;
+
+	wait_ms = gc_th->min_sleep_time;
 
 	set_freezable();
 	do {
-		bool sync_mode;
+		bool sync_mode, foreground = false;
 
 		wait_event_interruptible_timeout(*wq,
 				kthread_should_stop() || freezing(current) ||
+				waitqueue_active(fggc_wq) ||
 				gc_th->gc_wake,
 				msecs_to_jiffies(wait_ms));
+
+		if (test_opt(sbi, GC_MERGE) && waitqueue_active(fggc_wq))
+			foreground = true;
 
 		sbi->rapid_gc = TRIGGER_RAPID_GC ? 1 : 0;
 		if (sbi->rapid_gc) {
@@ -112,6 +132,8 @@ static int gc_thread_func(void *data)
 			continue;
 		}
 
+		boost = sbi->gc_booster;
+
 		/*
 		 * [GC triggering condition]
 		 * 0. GC is not conducted currently.
@@ -144,31 +166,48 @@ static int gc_thread_func(void *data)
 			goto next;
 		}
 
-		if (has_enough_invalid_blocks(sbi))
-			decrease_sleep_time(gc_th, &wait_ms);
-		else
-			increase_sleep_time(gc_th, &wait_ms);
+		if (boost)
+			calculate_sleep_time(sbi, gc_th, &wait_ms);
+		else {
+			if (has_enough_invalid_blocks(sbi))
+				decrease_sleep_time(gc_th, &wait_ms);
+			else
+				increase_sleep_time(gc_th, &wait_ms);
+		}
 do_gc:
-		stat_inc_bggc_count(sbi->stat_info);
+		gc_count = boost ? get_gc_count(sbi) : 1;
 
-		sync_mode = sbi->rapid_gc || F2FS_OPTION(sbi).bggc_mode == BGGC_MODE_SYNC;
-
-		/* if return value is not zero, no victim was selected */
-		if (f2fs_gc(sbi, sync_mode, true, false, NULL_SEGNO)) {
-			wait_ms = gc_th->no_gc_sleep_time;
-			sbi->rapid_gc = false;
-			rapid_gc_set_wakelock();
-			sbi->gc_mode = GC_NORMAL;
-			f2fs_info(sbi,
-				"No more rapid GC victim found, "
-				"sleeping for %u ms", wait_ms);
-
+		for (i = 0; i < gc_count; i++) {
 			/*
-			 * Rapid GC would have cleaned hundreds of segments
-			 * that would not be read again anytime soon.
+			 * f2fs_gc will release gc_lock before return,
+			 * so we need to relock it before calling f2fs_gc.
 			 */
-			mm_drop_caches(3);
-			f2fs_info(sbi, "dropped caches");
+			if (i && !down_write_trylock(&sbi->gc_lock)) {
+				stat_other_skip_bggc_count(sbi);
+				break;
+			}
+
+			if (!foreground)
+				stat_inc_bggc_count(sbi->stat_info);
+
+			sync_mode = F2FS_OPTION(sbi).bggc_mode == BGGC_MODE_SYNC;
+
+			/* foreground GC was been triggered via f2fs_balance_fs() */
+			if (foreground)
+				sync_mode = false;
+
+			/* if return value is not zero, no victim was selected */
+			if (f2fs_gc(sbi, sync_mode, !foreground, false, NULL_SEGNO)) {
+				wait_ms = gc_th->no_gc_sleep_time;
+				break;
+			}
+
+			if (foreground)
+				wake_up_all(&gc_th->fggc_wq);
+
+			if (should_break_gc(sbi))
+				break;
+
 		}
 
 		trace_f2fs_background_gc(sbi->sb, wait_ms,
