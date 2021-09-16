@@ -27,6 +27,7 @@
 #include <linux/delay.h>
 #include <linux/oneplus/boot_mode.h>
 #include <linux/workqueue.h>
+#include <linux/rtmutex.h>
 
 #include "util_interface/touch_interfaces.h"
 #include "tp_devices.h"
@@ -371,7 +372,7 @@ struct touchpanel_data {
 	struct notifier_block fb_notif;	/*register to control suspend/resume */
 #endif
 
-	struct mutex mutex;	/*mutex for lock i2c related flow */
+	struct rt_mutex mutex;	/*mutex for lock i2c related flow */
 	struct completion pm_complete;	/*completion for control suspend and resume flow */
 	struct completion fw_complete;	/*completion for control fw update */
 	struct completion resume_complete;	/*completion for control fw update */

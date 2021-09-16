@@ -76,7 +76,7 @@ struct rmidev_data {
 	int ref_count;
 	struct cdev main_dev;
 	struct class *device_class;
-	struct mutex file_mutex;
+	struct rt_mutex file_mutex;
 	struct rmidev_handle *rmi_dev;
 	struct remotepanel_data *pdata;
 };
@@ -467,7 +467,7 @@ static loff_t rmidev_llseek(struct file *filp, loff_t off, int whence)
 		return -EBADF;
 	}
 
-	mutex_lock(&(dev_data->file_mutex));
+	rt_mutex_lock(&(dev_data->file_mutex));
 
 	switch (whence) {
 	case SEEK_SET:
@@ -495,7 +495,7 @@ static loff_t rmidev_llseek(struct file *filp, loff_t off, int whence)
 	filp->f_pos = newpos;
 
  clean_up:
-	mutex_unlock(&(dev_data->file_mutex));
+	rt_mutex_unlock(&(dev_data->file_mutex));
 
 	return newpos;
 }
@@ -531,8 +531,8 @@ static ssize_t rmidev_read(struct file *filp, char __user * buf,
 	if (count > (REG_ADDR_LIMIT - *f_pos))
 		count = REG_ADDR_LIMIT - *f_pos;
 
-	mutex_lock(dev_data->pdata->pmutex);
-	mutex_lock(&(dev_data->file_mutex));
+	rt_mutex_lock(dev_data->pdata->pmutex);
+	rt_mutex_lock(&(dev_data->file_mutex));
 
 	retval = remote_rmi4_i2c_read(*f_pos, tmpbuf, count);
 	if (retval < 0)
@@ -544,8 +544,8 @@ static ssize_t rmidev_read(struct file *filp, char __user * buf,
 		*f_pos += retval;
 
  clean_up:
-	mutex_unlock(&(dev_data->file_mutex));
-	mutex_unlock(dev_data->pdata->pmutex);
+	rt_mutex_unlock(&(dev_data->file_mutex));
+	rt_mutex_unlock(dev_data->pdata->pmutex);
 
 	kfree(tmpbuf);
 	return retval;
@@ -586,15 +586,15 @@ static ssize_t rmidev_write(struct file *filp, const char __user * buf,
 		kfree(tmpbuf);
 		return -EFAULT;
 	}
-	mutex_lock(dev_data->pdata->pmutex);
-	mutex_lock(&(dev_data->file_mutex));
+	rt_mutex_lock(dev_data->pdata->pmutex);
+	rt_mutex_lock(&(dev_data->file_mutex));
 
 	retval = remote_rmi4_i2c_write(*f_pos, tmpbuf, count);
 	if (retval >= 0)
 		*f_pos += retval;
 
-	mutex_unlock(&(dev_data->file_mutex));
-	mutex_unlock(dev_data->pdata->pmutex);
+	rt_mutex_unlock(&(dev_data->file_mutex));
+	rt_mutex_unlock(dev_data->pdata->pmutex);
 	kfree(tmpbuf);
 
 	return retval;
@@ -691,7 +691,7 @@ static int rmidev_open(struct inode *inp, struct file *filp)
 
 	filp->private_data = dev_data;
 
-	mutex_lock(&(dev_data->file_mutex));
+	rt_mutex_lock(&(dev_data->file_mutex));
 	*(dev_data->pdata->enable_remote) = 1;
 	//remote_rmi4_i2c_enable(false);
 	dev_dbg(device_ptr, "%s: Attention interrupt disabled\n", __func__);
@@ -702,7 +702,7 @@ static int rmidev_open(struct inode *inp, struct file *filp)
 	else
 		retval = -EACCES;
 
-	mutex_unlock(&(dev_data->file_mutex));
+	rt_mutex_unlock(&(dev_data->file_mutex));
 
 	return retval;
 }
@@ -719,7 +719,7 @@ static int rmidev_release(struct inode *inp, struct file *filp)
 
 	rmidev_create_attr(false);
 
-	mutex_lock(&(dev_data->file_mutex));
+	rt_mutex_lock(&(dev_data->file_mutex));
 
 	dev_data->ref_count--;
 	if (dev_data->ref_count < 0)
@@ -728,7 +728,7 @@ static int rmidev_release(struct inode *inp, struct file *filp)
 	remote_rmi4_i2c_enable(true);
 	dev_dbg(device_ptr, "%s: Attention interrupt enabled\n", __func__);
 	enable_irq(dev_data->pdata->irq);
-	mutex_unlock(&(dev_data->file_mutex));
+	rt_mutex_unlock(&(dev_data->file_mutex));
 
 	return 0;
 }
@@ -862,7 +862,7 @@ int register_remote_device(struct remotepanel_data *pdata)
 
 	dev_data->pdata = pdata;
 
-	mutex_init(&dev_data->file_mutex);
+	rt_mutex_init(&dev_data->file_mutex);
 	dev_data->rmi_dev = rmidev;
 	rmidev->data = dev_data;
 

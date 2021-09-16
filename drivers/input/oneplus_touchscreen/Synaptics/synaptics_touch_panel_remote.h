@@ -16,7 +16,7 @@ struct remotepanel_data {
 	struct i2c_client *client;
 	struct input_dev *input_dev;
 	//    struct input_dev *kpd;
-	struct mutex *pmutex;
+	struct rt_mutex *pmutex;
 	int irq_gpio;
 	unsigned int irq;
 	int *enable_remote;
