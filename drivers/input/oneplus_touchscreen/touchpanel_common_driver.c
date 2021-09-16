@@ -14,6 +14,7 @@
 #include <linux/time.h>
 #include <linux/pm_wakeup.h>
 
+
 #ifndef TPD_USE_EINT
 #include <linux/hrtimer.h>
 #endif
@@ -713,11 +714,11 @@ static void tp_async_work_lock(struct work_struct *work)
 {
 	struct touchpanel_data *ts =
 	    container_of(work, struct touchpanel_data, async_work);
-	mutex_lock(&ts->mutex);
+	rt_mutex_lock(&ts->mutex);
 	if (ts->ts_ops->async_work) {
 		ts->ts_ops->async_work(ts->chip_data);
 	}
-	mutex_unlock(&ts->mutex);
+	rt_mutex_unlock(&ts->mutex);
 }
 
 static void tp_work_common_callback(void)
@@ -807,7 +808,7 @@ static void tp_fw_update_work(struct work_struct *work)
 
 	TPD_INFO("%s: fw_name = %s\n", __func__, ts->panel_data.fw_name);
 
-	mutex_lock(&ts->mutex);
+	rt_mutex_lock(&ts->mutex);
 	if (ts->int_mode == BANNABLE) {
 		disable_irq_nosync(ts->irq);
 	}
@@ -919,7 +920,7 @@ static void tp_fw_update_work(struct work_struct *work)
 	if (ts->int_mode == BANNABLE) {
 		enable_irq(ts->irq);
 	}
-	mutex_unlock(&ts->mutex);
+	rt_mutex_unlock(&ts->mutex);
 
 	ts->force_update = 0;
 
@@ -933,9 +934,9 @@ static enum hrtimer_restart touchpanel_timer_func(struct hrtimer *timer)
 	struct touchpanel_data *ts =
 	    container_of(timer, struct touchpanel_data, timer);
 
-	mutex_lock(&ts->mutex);
+	rt_mutex_lock(&ts->mutex);
 	tp_work_func(ts);
-	mutex_unlock(&ts->mutex);
+	rt_mutex_unlock(&ts->mutex);
 	hrtimer_start(&ts->timer, ktime_set(0, 12500000), HRTIMER_MODE_REL);
 
 	return HRTIMER_NORESTART;
@@ -947,9 +948,9 @@ static irqreturn_t tp_irq_thread_fn(int irq, void *dev_id)
 
 	if (ts->int_mode == BANNABLE) {
 		__pm_stay_awake(&ts->source);	//avoid system enter suspend lead to i2c error
-		mutex_lock(&ts->mutex);
+		rt_mutex_lock(&ts->mutex);
 		tp_work_func(ts);
-		mutex_unlock(&ts->mutex);
+		rt_mutex_unlock(&ts->mutex);
 		__pm_relax(&ts->source);
 	} else {
 		tp_work_func_unlock(ts);
@@ -1003,7 +1004,7 @@ static ssize_t proc_gesture_control_write(struct file *file,
 		value = 0;
 	}
 
-	mutex_lock(&ts->mutex);
+	rt_mutex_lock(&ts->mutex);
 	if (ts->gesture_enable != value) {
 		ts->gesture_enable = value;
 		tp_1v8_power = ts->gesture_enable;
@@ -1018,7 +1019,7 @@ static ssize_t proc_gesture_control_write(struct file *file,
 	} else {
 		TPD_INFO("%s: do not do same operator :%d\n", __func__, value);
 	}
-	mutex_unlock(&ts->mutex);
+	rt_mutex_unlock(&ts->mutex);
 
 	return count;
 }
@@ -1108,10 +1109,10 @@ static ssize_t proc_ps_status_write(struct file *file,
 
 	if (!ts->is_suspended
 	    && (ts->suspend_state == TP_SPEEDUP_RESUME_COMPLETE)) {
-		mutex_lock(&ts->mutex);
+		rt_mutex_lock(&ts->mutex);
 		ts->ps_status = value;
 		ts->ts_ops->write_ps_status(ts->chip_data, value);
-		mutex_unlock(&ts->mutex);
+		rt_mutex_unlock(&ts->mutex);
 	}
 
 	return count;
@@ -1176,9 +1177,9 @@ static ssize_t proc_game_switch_write(struct file *file,
 
 	TPD_INFO("%s: game_switch value=0x%x\n", __func__, value);
 	if (!ts->is_suspended) {
-		mutex_lock(&ts->mutex);
+		rt_mutex_lock(&ts->mutex);
 		ts->ts_ops->mode_switch(ts->chip_data, MODE_GAME, value > 0);
-		mutex_unlock(&ts->mutex);
+		rt_mutex_unlock(&ts->mutex);
 	} else {
 		TPD_INFO("%s: game_switch_support is_suspended.\n", __func__);
 	}
@@ -1244,10 +1245,10 @@ static ssize_t proc_gesture_switch_write(struct file *file,
 	TPD_DEBUG("%s: gesture_switch value= %d\n", __func__, value);
 	if ((ts->is_suspended == 1) && (ts->gesture_enable == 1)) {
 		__pm_stay_awake(&ts->source);	//avoid system enter suspend lead to i2c error
-		mutex_lock(&ts->mutex);
+		rt_mutex_lock(&ts->mutex);
 		ts->ts_ops->mode_switch(ts->chip_data, MODE_GESTURE_SWITCH,
 					ts->gesture_switch);
-		mutex_unlock(&ts->mutex);
+		rt_mutex_unlock(&ts->mutex);
 		__pm_relax(&ts->source);
 	} else {
 		TPD_INFO("%s: gesture mode switch must be suspend.\n",
@@ -1363,10 +1364,10 @@ static ssize_t proc_limit_switch_write(struct file *file,
 
 	TPD_DEBUG("%s: ts->limit_switch = %d\n", __func__, value);
 	if (ts->is_suspended == 0) {
-		mutex_lock(&ts->mutex);
+		rt_mutex_lock(&ts->mutex);
 		ts->ts_ops->mode_switch(ts->chip_data, MODE_LIMIT_SWITCH,
 					ts->limit_switch);
-		mutex_unlock(&ts->mutex);
+		rt_mutex_unlock(&ts->mutex);
 	}
 	return count;
 }
@@ -1571,12 +1572,12 @@ static ssize_t proc_register_info_read(struct file *file,
 	}
 
 	if (ts->ts_ops->register_info_read) {
-		mutex_lock(&ts->mutex);
+		rt_mutex_lock(&ts->mutex);
 		ts->ts_ops->register_info_read(ts->chip_data,
 					       ts->reg_info.reg_addr,
 					       ts->reg_info.reg_result,
 					       ts->reg_info.reg_length);
-		mutex_unlock(&ts->mutex);
+		rt_mutex_unlock(&ts->mutex);
 		for (i = 0; i < ts->reg_info.reg_length; i++) {
 			num_read_chars +=
 			    sprintf(&(page[num_read_chars]),
@@ -1682,7 +1683,7 @@ static ssize_t proc_fd_enable_write(struct file *file,
 	if (value == ts->fd_enable)
 		return count;
 
-	mutex_lock(&ts->mutex);
+	rt_mutex_lock(&ts->mutex);
 	ts->fd_enable = value;
 	if (!ts->is_suspended
 	    && (ts->suspend_state == TP_SPEEDUP_RESUME_COMPLETE)) {
@@ -1691,7 +1692,7 @@ static ssize_t proc_fd_enable_write(struct file *file,
 		input_event(ps_input_dev, EV_MSC, MSC_RAW, 0);	//when open fd report default key for sensor.
 		input_sync(ps_input_dev);
 	}
-	mutex_unlock(&ts->mutex);
+	rt_mutex_unlock(&ts->mutex);
 
 	return count;
 }
@@ -1779,13 +1780,13 @@ static ssize_t proc_fd_calibrate_write(struct file *file,
 	TPD_DEBUG("%s value: %d, fd_calibrate :%d\n", __func__, value,
 		  ts->fd_calibrate);
 
-	mutex_lock(&ts->mutex);
+	rt_mutex_lock(&ts->mutex);
 	ts->fd_calibrate = value;
 	if (ts->fd_enable) {
 		ts->ts_ops->mode_switch(ts->chip_data, MODE_FACE_CALIBRATE,
 					ts->fd_calibrate);
 	}
-	mutex_unlock(&ts->mutex);
+	rt_mutex_unlock(&ts->mutex);
 
 	return count;
 }
@@ -1847,10 +1848,10 @@ static ssize_t proc_touch_hold_switch_write(struct file *file,
 		return count;
 	}
 
-	mutex_lock(&ts->mutex);
+	rt_mutex_lock(&ts->mutex);
 	ts->ts_ops->mode_switch(ts->chip_data, MODE_TOUCH_HOLD,
 				ts->touch_hold_enable);
-	mutex_unlock(&ts->mutex);
+	rt_mutex_unlock(&ts->mutex);
 
 	return count;
 }
@@ -1904,13 +1905,13 @@ static ssize_t proc_charge_detect_write(struct file *file,
 	TPD_DEBUG("%s value: %d, charge detect enable:%d\n", __func__, value,
 		  ts->charge_detect);
 	ts->charge_detect = value;
-	mutex_lock(&ts->mutex);
+	rt_mutex_lock(&ts->mutex);
 	if (ts->charge_detect_support
 	    && ts->suspend_state == TP_SPEEDUP_RESUME_COMPLETE) {
 		ts->ts_ops->mode_switch(ts->chip_data, MODE_CHARGE,
 					ts->charge_detect);
 	}
-	mutex_unlock(&ts->mutex);
+	rt_mutex_unlock(&ts->mutex);
 	return count;
 }
 
@@ -2928,7 +2929,7 @@ int register_common_touch_device(struct touchpanel_data *pdata)
 	init_parse_dts(ts->dev, ts);
 
 	//step3 : mutex init
-	mutex_init(&ts->mutex);
+	rt_mutex_init(&ts->mutex);
 	init_completion(&ts->pm_complete);
 	init_completion(&ts->fw_complete);
 	init_completion(&ts->resume_complete);
@@ -3223,7 +3224,7 @@ static int tp_suspend(struct device *dev)
 		ts->ts_ops->reinit_device(ts->chip_data);
 	}
 	//step2:get mutex && start process suspend flow
-	mutex_lock(&ts->mutex);
+	rt_mutex_lock(&ts->mutex);
 	if (!ts->is_suspended) {
 		ts->is_suspended = 1;
 		ts->suspend_state = TP_SUSPEND_COMPLETE;
@@ -3263,7 +3264,7 @@ static int tp_suspend(struct device *dev)
 
  EXIT:
 	TPD_INFO("%s: end.\n", __func__);
-	mutex_unlock(&ts->mutex);
+	rt_mutex_unlock(&ts->mutex);
 
  NO_NEED_SUSPEND:
 	complete(&ts->pm_complete);
@@ -3300,9 +3301,9 @@ static void tp_resume(struct device *dev)
 		ts->ts_ops->reinit_device(ts->chip_data);
 	}
 	if (ts->ts_ops->resume_prepare) {
-		mutex_lock(&ts->mutex);
+		rt_mutex_lock(&ts->mutex);
 		ts->ts_ops->resume_prepare(ts->chip_data);
-		mutex_unlock(&ts->mutex);
+		rt_mutex_unlock(&ts->mutex);
 	}
 
 	queue_work(ts->speedup_resume_wq, &ts->speed_up_work);
@@ -3329,7 +3330,7 @@ static void speedup_resume(struct work_struct *work)
 	TPD_INFO("%s is called\n", __func__);
 
 	//step1: get mutex for locking i2c acess flow
-	mutex_lock(&ts->mutex);
+	rt_mutex_lock(&ts->mutex);
 
 	tp_btnkey_release(ts);
 	tp_touch_release(ts);
@@ -3382,7 +3383,7 @@ static void speedup_resume(struct work_struct *work)
 
 	//step7:Unlock  && exit
 	TPD_INFO("%s: end!\n", __func__);
-	mutex_unlock(&ts->mutex);
+	rt_mutex_unlock(&ts->mutex);
 	complete(&ts->pm_complete);
 }
 
@@ -3479,9 +3480,9 @@ void ts_switch_poll_rate(bool is_90)
 	    || (ts->suspend_state != TP_SPEEDUP_RESUME_COMPLETE))
 		return;
 
-	mutex_lock(&ts->mutex);
+	rt_mutex_lock(&ts->mutex);
 	ts->ts_ops->mode_switch(ts->chip_data, MODE_REFRESH_SWITCH, is_90);
-	mutex_unlock(&ts->mutex);
+	rt_mutex_unlock(&ts->mutex);
 }
 
 #ifdef CONFIG_TOUCHPANEL_MTK_PLATFORM
