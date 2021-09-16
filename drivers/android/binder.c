@@ -60,6 +60,7 @@
 #include <linux/miscdevice.h>
 #include <linux/module.h>
 #include <linux/mutex.h>
+#include <linux/rtmutex.h>
 #include <linux/nsproxy.h>
 #include <linux/poll.h>
 #include <linux/debugfs.h>
@@ -279,7 +280,7 @@ static struct binder_transaction_log_entry *binder_transaction_log_add(
 
 struct binder_context {
 	struct binder_node *binder_context_mgr_node;
-	struct mutex context_mgr_node_lock;
+	struct rt_mutex context_mgr_node_lock;
 
 	kuid_t binder_context_mgr_uid;
 	const char *name;
@@ -3715,12 +3716,13 @@ static int binder_thread_write(struct binder_proc *proc,
 					if (ctx_mgr_node->proc == proc) {
 						binder_user_error("%d:%d context manager tried to acquire desc 0\n",
 								  proc->pid, thread->pid);
-						mutex_unlock(&context->context_mgr_node_lock);
+						rt_mutex_unlock(&context->context_mgr_node_lock);
 						return -EINVAL;
 					}
 					ret = binder_inc_ref_for_node(
 							proc, ctx_mgr_node,
 							strong, NULL, &rdata);
+				}
 				rt_mutex_unlock(&context->context_mgr_node_lock);
 			}
 			if (ret)
