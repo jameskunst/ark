@@ -6261,14 +6261,13 @@ int sched_cpu_activate(unsigned int cpu)
 
 int sched_cpu_deactivate(unsigned int cpu)
 {
-	struct rq *rq = cpu_rq(cpu);
 	int ret;
 
 	/*
 	 * Remove CPU from nohz.idle_cpus_mask to prevent participating in
 	 * load balancing when not active
 	 */
-	nohz_balance_exit_idle(rq);
+	nohz_balance_exit_idle(cpu);
 
 	set_cpu_active(cpu, false);
 	/*
