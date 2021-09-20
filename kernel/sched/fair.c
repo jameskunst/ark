@@ -6424,7 +6424,7 @@ static int compute_energy(struct energy_env *eenv)
 			} while (sg = sg->next, sg != sd->groups);
 		}
 next_cpu:
-		cpumask_clear_cpu(cpu, &visit_cpus);
+		__cpumask_clear_cpu(cpu, &visit_cpus);
 		continue;
 	}
 
@@ -11815,7 +11815,7 @@ void nohz_balance_exit_idle(unsigned int cpu)
 		 * Completely isolated CPUs don't ever set, so we must test.
 		 */
 		if (likely(cpumask_test_cpu(cpu, nohz.idle_cpus_mask))) {
-			cpumask_clear_cpu(cpu, nohz.idle_cpus_mask);
+			__cpumask_clear_cpu(cpu, nohz.idle_cpus_mask);
 			atomic_dec(&nohz.nr_cpus);
 		}
 		clear_bit(NOHZ_TICK_STOPPED, nohz_flags(cpu));
