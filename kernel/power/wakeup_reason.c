@@ -349,6 +349,243 @@ static struct attribute_group attr_group = {
 	.attrs = attrs,
 };
 
+static inline void stop_logging_wakeup_reasons(void)
+{
+	WRITE_ONCE(log_wakeups, false);
+}
+
+/*
+ * stores the immediate wakeup irqs; these often aren't the ones seen by
+ * the drivers that registered them, due to chained interrupt controllers,
+ * and multiple-interrupt dispatch.
+ */
+void log_base_wakeup_reason(int irq)
+{
+	unsigned long flags;
+
+	spin_lock_irqsave(&resume_reason_lock, flags);
+	base_irq_nodes = add_to_siblings(base_irq_nodes, irq);
+	WARN_ON(!base_irq_nodes);
+#ifndef CONFIG_DEDUCE_WAKEUP_REASONS
+	base_irq_nodes->handled = true;
+#endif
+	spin_unlock_irqrestore(&resume_reason_lock, flags);
+}
+
+#ifdef CONFIG_DEDUCE_WAKEUP_REASONS
+
+/* This function is called by generic_handle_irq, which may call itself
+ * recursively.  This happens with interrupts disabled.  Using
+ * log_possible_wakeup_reason, we build a tree of interrupts, tracing the call
+ * stack of generic_handle_irq, for each wakeup source containing the
+ * interrupts actually handled.
+ *
+ * Most of these "trees" would either have a single node (in the event that the
+ * wakeup source is the final interrupt), or consist of a list of two
+ * interrupts, with the wakeup source at the root, and the final dispatched
+ * interrupt at the leaf.
+ *
+ * When *all* wakeup sources have been thusly spoken for, this function will
+ * clear the log_wakeups flag, and print the wakeup reasons.
+
+   TODO: percpu
+
+ */
+
+static struct wakeup_irq_node *
+log_possible_wakeup_reason_start(int irq, struct irq_desc *desc,
+				 unsigned int depth)
+{
+	WARN_ON(!irqs_disabled() || !logging_wakeup_reasons());
+	WARN_ON((signed int)depth < 0);
+
+	/* If suspend was aborted, the base IRQ nodes are missing, and we stop
+	 * logging interrupts immediately.
+	 */
+	if (!base_irq_nodes) {
+		stop_logging_wakeup_reasons();
+		return NULL;
+	}
+
+	/* We assume wakeup interrupts are handlerd only by the first core. */
+	/* TODO: relax this by having percpu versions of the irq tree */
+	if (smp_processor_id() != 0) {
+		return NULL;
+	}
+
+	if (depth == 0) {
+		cur_irq_tree_depth = 0;
+		cur_irq_tree = search_siblings(base_irq_nodes, irq);
+	} else if (cur_irq_tree) {
+		if (depth > cur_irq_tree_depth) {
+			WARN_ON(depth - cur_irq_tree_depth > 1);
+			cur_irq_tree = add_child(cur_irq_tree, irq);
+			if (cur_irq_tree)
+				cur_irq_tree_depth++;
+		} else {
+			cur_irq_tree = get_base_node(cur_irq_tree,
+					cur_irq_tree_depth - depth);
+			cur_irq_tree_depth = depth;
+			cur_irq_tree = add_to_siblings(cur_irq_tree, irq);
+		}
+	}
+
+	return cur_irq_tree;
+}
+
+static void log_possible_wakeup_reason_complete(struct wakeup_irq_node *n,
+						unsigned int depth,
+						bool handled)
+{
+	if (!n)
+		return;
+	n->handled = handled;
+	if (depth == 0) {
+		if (base_irq_nodes_done()) {
+			stop_logging_wakeup_reasons();
+			complete(&wakeups_completion);
+			print_wakeup_sources();
+		}
+	}
+}
+
+bool log_possible_wakeup_reason(int irq,
+			struct irq_desc *desc,
+			bool (*handler)(struct irq_desc *))
+{
+	static DEFINE_PER_CPU(unsigned int, depth);
+
+	struct wakeup_irq_node *n;
+	bool handled;
+	unsigned int d;
+
+	d = get_cpu_var(depth)++;
+	put_cpu_var(depth);
+
+	n = log_possible_wakeup_reason_start(irq, desc, d);
+
+	handled = handler(desc);
+
+	d = --get_cpu_var(depth);
+	put_cpu_var(depth);
+
+	if (!handled && desc && desc->action)
+		pr_debug("%s: irq %d action %pF not handled\n", __func__,
+			irq, desc->action->handler);
+
+	log_possible_wakeup_reason_complete(n, d, handled);
+
+	return handled;
+}
+
+#endif /* CONFIG_DEDUCE_WAKEUP_REASONS */
+
+void log_suspend_abort_reason(const char *fmt, ...)
+{
+	va_list args;
+	unsigned long flags;
+
+	spin_lock_irqsave(&resume_reason_lock, flags);
+
+	/* Suspend abort reason has already been logged. */
+	if (suspend_abort) {
+		spin_unlock_irqrestore(&resume_reason_lock, flags);
+		return;
+	}
+
+	suspend_abort = true;
+	va_start(args, fmt);
+	vsnprintf(abort_or_bad_wake_reason, MAX_SUSPEND_ABORT_LEN, fmt, args);
+	va_end(args);
+
+	spin_unlock_irqrestore(&resume_reason_lock, flags);
+}
+
+/*
+ * Logs a possible wakeup reason that would be missed by normal wakeup
+ * logging, such as an unmapped HW IRQ, an IRQ configured with both
+ * IRQF_NO_SUSPEND and enable_irq_wake(), etc
+ * The reason is not logged if a suspend abort has already been captured,
+ * since those occur earlier in the suspend/resume flow.
+ */
+void log_bad_wake_reason(const char *fmt, ...)
+{
+	va_list args;
+	unsigned long flags;
+
+	spin_lock_irqsave(&resume_reason_lock, flags);
+
+	/* A suspend abort or bad wake reason has already been logged */
+	if (suspend_abort || bad_wake) {
+		spin_unlock_irqrestore(&resume_reason_lock, flags);
+		return;
+	}
+
+	bad_wake = true;
+	va_start(args, fmt);
+	vsnprintf(abort_or_bad_wake_reason, MAX_SUSPEND_ABORT_LEN, fmt, args);
+	va_end(args);
+
+	spin_unlock_irqrestore(&resume_reason_lock, flags);
+}
+
+static bool match_node(struct wakeup_irq_node *n, void *_p)
+{
+	int irq = *((int *)_p);
+	return n->irq != irq;
+}
+
+static bool build_leaf_nodes(struct wakeup_irq_node *n, void *_p)
+{
+	struct list_head *wakeups = _p;
+	if (!n->child)
+		list_add(&n->next, wakeups);
+	return true;
+}
+
+static const struct list_head *get_wakeup_reasons_nosync(void)
+{
+	WARN_ON(logging_wakeup_reasons());
+	INIT_LIST_HEAD(&wakeup_irqs);
+	walk_irq_node_tree(base_irq_nodes, build_leaf_nodes, &wakeup_irqs);
+	return &wakeup_irqs;
+}
+
+static bool build_unfinished_nodes(struct wakeup_irq_node *n, void *_p)
+{
+	struct list_head *unfinished = _p;
+	if (!n->handled) {
+		pr_warning("%s: wakeup irq %d was not handled\n",
+			   __func__, n->irq);
+		list_add(&n->next, unfinished);
+	}
+	return true;
+}
+
+static bool delete_node(struct wakeup_irq_node *n, void *unused)
+{
+	list_del(&n->siblings);
+	kmem_cache_free(wakeup_irq_nodes_cache, n);
+	return true;
+}
+
+void clear_wakeup_reasons(void)
+{
+	unsigned long flags;
+	spin_lock_irqsave(&resume_reason_lock, flags);
+
+	WARN_ON(logging_wakeup_reasons());
+	walk_irq_node_tree(base_irq_nodes, delete_node, NULL);
+	base_irq_nodes = NULL;
+	cur_irq_tree = NULL;
+	cur_irq_tree_depth = 0;
+	INIT_LIST_HEAD(&wakeup_irqs);
+	suspend_abort = false;
+	bad_wake = false;
+
+	spin_unlock_irqrestore(&resume_reason_lock, flags);
+}
+
 /* Detects a suspend and clears all the previous wake up reasons*/
 static int wakeup_reason_pm_event(struct notifier_block *notifier,
 		unsigned long pm_event, void *unused)
