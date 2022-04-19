@@ -2022,8 +2022,6 @@ static void _sde_crtc_blend_setup_mixer(struct drm_crtc *crtc,
 
 	is_video_mode = sde_encoder_check_curr_mode(sde_crtc->mixers[0].encoder,
 					       MSM_DISPLAY_CAP_VID_MODE);
-	if (is_video_mode)
-		cstate->sbuf_prefill_line = _sde_crtc_calc_inline_prefill(crtc);
 	sde_crtc->sbuf_rot_id_old = sde_crtc->sbuf_rot_id;
 	sde_crtc->sbuf_rot_id = 0x0;
 	sde_crtc->sbuf_rot_id_delta = 0x0;
@@ -2040,13 +2038,6 @@ static void _sde_crtc_blend_setup_mixer(struct drm_crtc *crtc,
 
 		pstate = to_sde_plane_state(state);
 		fb = state->fb;
-
-		/* assume all rotated planes report the same prefill amount */
-		if (is_video_mode) {
-			prefill = sde_plane_rot_get_prefill(plane);
-			if (prefill)
-				cstate->sbuf_prefill_line = prefill;
-		}
 
 		sde_plane_ctl_flush(plane, ctl, true);
 		rot_id = sde_plane_get_sbuf_id(plane);

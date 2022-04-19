@@ -2194,7 +2194,6 @@ static void _sde_encoder_resource_control_rsc_update(
 
 	if (enable) {
 		rsc_cfg.inline_rotate_prefill =
-				sde_crtc_get_inline_prefill(sde_enc->crtc);
 
 		_sde_encoder_update_rsc_client(drm_enc, &rsc_cfg, true);
 	} else {

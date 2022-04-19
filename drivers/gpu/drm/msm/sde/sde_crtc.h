@@ -673,23 +673,6 @@ static inline bool sde_crtc_is_enabled(struct drm_crtc *crtc)
 }
 
 /**
- * sde_crtc_get_inline_prefill - get current inline rotation prefill
- * @crtc: Pointer to crtc
- * return: number of prefill lines
- */
-static inline u32 sde_crtc_get_inline_prefill(struct drm_crtc *crtc)
-{
-	struct sde_crtc_state *cstate;
-
-	if (!crtc || !crtc->state)
-		return 0;
-
-	cstate = to_sde_crtc_state(crtc->state);
-	return cstate->sbuf_cfg.rot_op_mode != SDE_CTL_ROT_OP_MODE_OFFLINE ?
-		cstate->sbuf_prefill_line : 0;
-}
-
-/**
  * sde_crtc_is_reset_required - validate the reset request based on the
  *	pm_suspend and crtc's active status. crtc's are left active
  *	on pm_suspend during LP1/LP2 states, as the display is still
