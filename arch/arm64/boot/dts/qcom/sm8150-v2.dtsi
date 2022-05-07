@@ -34,17 +34,12 @@
 		<1785600>;
 
 	qcom,cpufreq-table-4 =
-		<2016000>,
 		<2323200>,
 		<2419200>;
 
 	qcom,cpufreq-table-7 =
-		<2016000>,
-		<2227200>,
-		<2323200>,
 		<2534400>,
-		<2841600>,
-		<2956800>;
+		<2841600>;
 };
 
 &mdss_mdp {
@@ -450,9 +445,8 @@
 
 	CPU_COST_1: core-cost1 {
 		busy-cost-data = <
-			 726  558
-			 836  717
-			 871  845
+			2323200  717
+			2419200  845
 		>;
 		idle-cost-data = <
 			80 60 40
@@ -461,11 +455,8 @@
 
 	CPU_COST_2: core-cost2 {
 		busy-cost-data = <
-			 726  513
-			 802  622
-			 837  704
-			 914  824
-			1024 1092
+			2534400  824
+			2841600 1092
 		>;
 		idle-cost-data = <
 			110 90 70
@@ -474,7 +465,7 @@
 
 	CLUSTER_COST_0: cluster-cost0 {
 		busy-cost-data = <
-			 306   17
+			1785600   17
 		>;
 		idle-cost-data = <
 			3 2 1
@@ -483,9 +474,8 @@
 
 	CLUSTER_COST_1: cluster-cost1 {
 		busy-cost-data = <
-			 726   57
-			 836   90
-			 871  106
+			2323200   90
+			2419200  106
 		>;
 		idle-cost-data = <
 			3 2 1
@@ -494,11 +484,8 @@
 
 	CLUSTER_COST_2: cluster-cost2 {
 		busy-cost-data = <
-			 726  100
-			 802  120
-			 837  128
-			 914  140
-			1024  180
+			2534400  140
+			2841600  180
 		>;
 		idle-cost-data = <
 			3 2 1
