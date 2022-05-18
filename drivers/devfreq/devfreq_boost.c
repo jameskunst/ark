@@ -6,6 +6,7 @@
 #define pr_fmt(fmt) "devfreq_boost: " fmt
 
 #include <linux/devfreq_boost.h>
+#include <linux/msm_drm_notify.h>
 #include <linux/input.h>
 #include <linux/kthread.h>
 #include <linux/msm_drm_notify.h>
