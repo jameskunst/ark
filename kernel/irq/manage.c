@@ -1206,24 +1206,7 @@ static void affine_one_perf_thread(struct irqaction *action)
 	if (action->flags & IRQF_PERF_AFFINE) {
 		mask = cpu_perf_mask;
 		action->thread->pc_flags |= PC_PERF_AFFINE;
-	}
-
-	if (action->flags & IRQF_PERF_FIRST_AFFINE) {
-		mask = cpu_perf_first_mask;
-		action->thread->pc_flags |= PC_PERF_FIRST_AFFINE;
-	}
-
-	if (action->flags & IRQF_PERF_SECOND_AFFINE) {
-		mask = cpu_perf_second_mask;
-		action->thread->pc_flags |= PC_PERF_SECOND_AFFINE;
-	}
-
-	if (action->flags & IRQF_PERF_THIRD_AFFINE) {
-		mask = cpu_perf_third_mask;
-		action->thread->pc_flags |= PC_PERF_THIRD_AFFINE;
-	}
-
-	if (action->flags & IRQF_PRIME_AFFINE) {
+	} else if (action->flags & IRQF_PRIME_AFFINE) {
 		mask = cpu_prime_mask;
 		action->thread->pc_flags |= PC_PRIME_AFFINE;
 	} else if (action->flags & IRQF_HP_AFFINE) {
