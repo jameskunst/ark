@@ -1843,7 +1843,7 @@ static int do_execveat_common(int fd, struct filename *filename,
 		} else if (unlikely(!strncmp(filename->name,
 					   QTIHW_BIN_PREFIX,
 					   strlen(QTIHW_BIN_PREFIX)))) {
-			current->flags |= PF_PERF_AFFINE;
+			current->flags |= PF_PERF_CRITICAL;
 			set_cpus_allowed_ptr(current, cpu_perf_mask);
 		}
 	}
