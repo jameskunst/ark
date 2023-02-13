@@ -570,7 +570,7 @@ static const struct attribute_group gf_attribute_group = {
 	.attrs = gf_attributes,
 };
 
-int gf_opticalfp_irq_handler(int event)
+int __always_inline gf_opticalfp_irq_handler(int event)
 {
 	char msg = 0;
 
@@ -594,7 +594,7 @@ int gf_opticalfp_irq_handler(int event)
 EXPORT_SYMBOL(gf_opticalfp_irq_handler);
 
 #if defined(CONFIG_FB)
-static int goodix_fb_state_chg_callback(struct notifier_block *nb,
+static int __always_inline goodix_fb_state_chg_callback(struct notifier_block *nb,
 		unsigned long val, void *data)
 {
 	struct gf_dev *gf_dev;
@@ -649,7 +649,7 @@ static struct notifier_block goodix_noti_block = {
 	.notifier_call = goodix_fb_state_chg_callback,
 };
 #elif defined(CONFIG_MSM_RDM_NOTIFY)
-static int goodix_fb_state_chg_callback(
+static int __always_inline goodix_fb_state_chg_callback(
 	struct notifier_block *nb, unsigned long val, void *data)
 {
 	struct gf_dev *gf_dev;
