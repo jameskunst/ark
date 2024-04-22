@@ -1417,7 +1417,6 @@ void enable_nonboot_cpus(void)
 
 	cpumask_clear(frozen_cpus);
 	reaffine_perf_irqs(false);
-	balance_irqs();
 out:
 	cpu_maps_update_done();
 }

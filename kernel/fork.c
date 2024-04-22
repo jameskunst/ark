@@ -2231,9 +2231,20 @@ long _do_fork(unsigned long clone_flags,
 	int trace = 0;
 	long nr;
 
+<<<<<<< HEAD
 	/* Boost DDR bus to the max for 50 ms when userspace launches an app */
 	if (task_is_zygote(current))
 		devfreq_boost_kick_max(DEVFREQ_CPU_LLCC_DDR_BW, 50);
+=======
+	/* Boost DDR bus to the max for 500 ms when userspace launches an app */
+	if (task_is_zygote(current)) {
+		if (time_before(jiffies, last_mb_time + msecs_to_jiffies(200))) {
+	                cpu_input_boost_kick_max(250, true);
+        	        devfreq_boost_kick_max(DEVFREQ_MSM_CPUBW, 500, true);
+                	devfreq_boost_kick_max(DEVFREQ_MSM_LLCCBW, 500, true);
+		}
+	}
+>>>>>>> a5794463a5c5... sbalance: drop long balance interval
 
 	/*
 	 * Determine whether and which event to report to ptracer.  When
