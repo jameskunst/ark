@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # HOME path
-export HOME=/home/james
+export HOME=/home/ark
 
 # Compiler environment
 export CLANG_PATH=$HOME/proton-clang/bin
