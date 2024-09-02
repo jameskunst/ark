@@ -1082,6 +1082,7 @@ static int cpu_down_maps_locked(unsigned int cpu, enum cpuhp_state target)
 
 static int do_cpu_down(unsigned int cpu, enum cpuhp_state target)
 {
+	struct cpumask newmask;
 	int err;
 
 	preempt_disable();
