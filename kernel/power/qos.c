@@ -276,7 +276,6 @@ static inline int pm_qos_set_value_for_cpus(struct pm_qos_request *new_req,
 	struct pm_qos_request *req;
 	unsigned long new_req_cpus;
 	int cpu;
-	s32 qos_val[NR_CPUS] = { [0 ... 3] = c->default_value };
 
 	/*
 	 * pm_qos_constraints can be from different classes,
